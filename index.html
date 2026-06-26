@@ -1128,17 +1128,17 @@
 // CONFIG — preencha após configurar Google Cloud
 // ══════════════════════════════════════════════
 const CFG = {
-  CLIENT_ID:    'SEU_CLIENT_ID_AQUI.apps.googleusercontent.com',
-  REDIRECT_URI: window.location.origin + window.location.pathname,
+  CLIENT_ID:    '752637013195-2efafcn119m6ssohnhn4h6ih6alb72ie.apps.googleusercontent.com',
+  REDIRECT_URI: 'https://SerranoGuardia.github.io/serrano/',
   SCOPES:       'https://www.googleapis.com/auth/drive',
   PASTAS: {
-    'LAB 01': 'ID_PASTA_LAB01',
-    'LAB 02': 'ID_PASTA_LAB02',
-    'LAB 03': 'ID_PASTA_LAB03',
-    'LAB 04': 'ID_PASTA_LAB04',
+    'LAB 01': '17MOU0hIc8m6JoIttVdo2RePqNJCvB4c0',
+    'LAB 02': '1kxEiKmahxGcmpzEp8EeC49hykdXeRG5P',
+    'LAB 03': '1GnUR_YZ_gCNnBRU30zbpBjp0Vw-WvnIh',
+    'LAB 04': '1kwBlgtO0JugpssXCCSpsxYiFkdiSZ0O2',
   },
-  NUMERO_TI: '5519900000000',  // WhatsApp TI (DDI+DDD+número, sem +)
-  WEB_APP_URL: '',             // URL do Google Apps Script (opcional)
+  NUMERO_TI: '5511988720669',
+  WEB_APP_URL: '',
 };
 
 // ══════════════════════════════════════════════
@@ -1974,25 +1974,44 @@ initHome();
 // A integração com navTo é feita via navTo() no bottom nav.
 
 // ══════════════════════════════════════════════
-// AUTH — OAuth 2.0 Implicit Flow
+// AUTH — Google Identity Services (Token Model)
+// Substitui o Implicit Flow (depreciado pelo Google)
 // ══════════════════════════════════════════════
 const TK_KEY  = 'cse_token';
 const EXP_KEY = 'cse_expiry';
 
+let _gisClient = null;
+
+// Carrega a lib GIS e inicializa o token client
+(function _initGIS() {
+  const s = document.createElement('script');
+  s.src = 'https://accounts.google.com/gsi/client';
+  s.onload = () => {
+    _gisClient = google.accounts.oauth2.initTokenClient({
+      client_id: CFG.CLIENT_ID,
+      scope:     CFG.SCOPES,
+      callback:  (resp) => {
+        if (resp.error) { showToast('Erro ao conectar Drive: ' + resp.error, 'error'); return; }
+        const expiry = Date.now() + (parseInt(resp.expires_in) * 1000);
+        localStorage.setItem(TK_KEY,  resp.access_token);
+        localStorage.setItem(EXP_KEY, String(expiry));
+        showToast('Drive conectado ✓', 'success');
+        initFotos();
+      },
+    });
+  };
+  document.head.appendChild(s);
+})();
+
 function driveLogin() {
-  const p = new URLSearchParams({
-    client_id:     CFG.CLIENT_ID,
-    redirect_uri:  CFG.REDIRECT_URI,
-    response_type: 'token',
-    scope:         CFG.SCOPES,
-    prompt:        'select_account',
-  });
-  window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${p}`;
+  if (!_gisClient) { showToast('Aguarde, carregando...', 'info'); return; }
+  _gisClient.requestAccessToken({ prompt: 'select_account' });
 }
 
+// Mantida por compatibilidade — GIS não usa redirect, mas processamos hash legado
 function processarTokenCallback() {
-  const hash = window.location.hash.substring(1);
-  const p    = new URLSearchParams(hash);
+  const hash  = window.location.hash.substring(1);
+  const p     = new URLSearchParams(hash);
   const token = p.get('access_token');
   const expIn = parseInt(p.get('expires_in') || '3600', 10);
   if (!token) return false;
@@ -2011,8 +2030,12 @@ function getToken() {
 function driveAutenticado() { return !!getToken(); }
 
 function driveLogout() {
+  const token = getToken();
   localStorage.removeItem(TK_KEY);
   localStorage.removeItem(EXP_KEY);
+  if (token && window.google?.accounts?.oauth2) {
+    google.accounts.oauth2.revoke(token, () => {});
+  }
   showToast('Drive desconectado.', 'info');
   initFotos();
 }
@@ -2380,10 +2403,9 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:') {
     .catch(e => console.warn('SW:', e));
 }
 
-// Processa token OAuth no carregamento (vindo de redirect)
+// Processa token legado via URL hash (fallback)
 if (window.location.hash.includes('access_token')) {
   processarTokenCallback();
-  // Vai direto para fotos após login
   window.addEventListener('load', () => navTo('fotos'));
 }
 </script>
