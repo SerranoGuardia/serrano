@@ -16,10 +16,10 @@ export const CONFIG = {
   // Obtenha abrindo a pasta no Drive e copiando o ID da URL:
   // drive.google.com/drive/folders/ESTE_EH_O_ID
   PASTAS: {
-    'LAB 01': '1BXORO0OZxNgdTwQdHx6eThcXX7Q-jn5N',
-    'LAB 02': '1aYtQv9AVMk7FQWvAxRBJpN9gspxSJAZr',
-    'LAB 03': '1sSqUnovhSmprWCvYeUdPN7GoE4ygZoId',
-    'LAB 04': '1b9eLfn57Lsopv7DruRsMPojKa5-nh_u7',
+    'LAB 01': '1asn6q5WfYTfkNXLCAsjjF35EOMqP4Uqv?hl=pt-br',
+    'LAB 02': '1-OUUr4Bb3wt_ALs2uIAn3qQim5z1qVYV?hl=pt-br',
+    'LAB 03': '1qAG6mpdMTiOhIiu2ultip9BpQPwd7Yqx?hl=pt-br',
+    'LAB 04': '1-Km6b9xoFDxion-dGtHxZEfQ-IHznwGN?hl=pt-br',
   },
 
   // Número do WhatsApp do responsável de TI (com DDI, sem + ou espaços)
