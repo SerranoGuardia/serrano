@@ -4,7 +4,7 @@
 
 export const CONFIG = {
   // Obtido em: console.cloud.google.com → Credenciais → ID do Cliente OAuth
-  CLIENT_ID: '752637013195-2efafcn119m6ssohnhn4h6ih6alb72ie.apps.googleusercontent.com.apps.googleusercontent.com',
+  CLIENT_ID: '752637013195-2efafcn119m6ssohnhn4h6ih6alb72ie.apps.googleusercontent.com',
 
   // URL exata cadastrada no Google Cloud Console como URI de redirecionamento
   REDIRECT_URI: 'https://SerranoGuardia.github.io/serrano/',
