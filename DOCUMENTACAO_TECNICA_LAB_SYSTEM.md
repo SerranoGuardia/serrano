@@ -900,3 +900,7 @@ Camera API (getUserMedia), Google Drive API v3, OAuth 2.0 Implicit Flow,
 GitHub Pages, PWA (manifest + SW)
 ══════════════════════════════════════════════════════════════════
 ```
+
+Erro: Erro 401: invalid_client
+Detalhes da solicitação: flowName=GeneralOAuthFlow
+
