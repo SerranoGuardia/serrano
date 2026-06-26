@@ -1,0 +1,2391 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#4f8cff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Lab System">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<title>CSE · Lab System</title>
+<style>
+
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #222536;
+    --border: #2e3247;
+    --accent: #4f8cff;
+    --accent2: #38d9a9;
+    --danger: #ff6b6b;
+    --orange: #ffaa44;
+    --purple: #b57bee;
+    --text: #e8eaf6;
+    --text2: #8b90b0;
+    --text3: #5a5f7d;
+    --done-bg: #152318;
+    --done-border: #2d5a38;
+    --done-text: #6fcf97;
+    --radius: 14px;
+    --radius-sm: 8px;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+  body {
+    font-family:'DM Sans',sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    min-height:100vh;
+    overflow-x:hidden;
+  }
+
+  /* ── SCREENS ── */
+  .screen { display:none; min-height:100vh; padding-bottom:70px; }
+  .screen.active { display:block; }
+
+  /* ══════════════════════════════
+     HOME
+  ══════════════════════════════ */
+  .home-header {
+    position:sticky; top:0; z-index:100;
+    background:rgba(15,17,23,0.97);
+    backdrop-filter:blur(18px);
+    border-bottom:1px solid var(--border);
+    padding:14px 16px 12px;
+  }
+  .home-header-row {
+    display:flex; align-items:center;
+    justify-content:space-between; margin-bottom:4px;
+  }
+  .logo {
+    font-family:'DM Mono',monospace;
+    font-size:11px; color:var(--accent);
+    letter-spacing:.12em; text-transform:uppercase;
+  }
+  .home-date { font-family:'DM Mono',monospace; font-size:11px; color:var(--text3); }
+  .home-title { font-size:17px; font-weight:700; color:var(--text); }
+  .home-sub { font-size:12px; color:var(--text3); margin-top:1px; }
+
+  /* Day tabs */
+  .day-tabs {
+    display:flex; gap:6px;
+    padding:10px 16px;
+    overflow-x:auto; scrollbar-width:none;
+    border-bottom:1px solid var(--border);
+    background:var(--bg);
+    position:sticky; top:80px; z-index:99;
+  }
+  .day-tabs::-webkit-scrollbar { display:none; }
+  .day-tab {
+    flex-shrink:0; padding:7px 14px;
+    border-radius:99px; border:1px solid var(--border);
+    background:none; color:var(--text2);
+    font-family:'DM Sans',sans-serif;
+    font-size:13px; font-weight:600;
+    cursor:pointer; transition:all .2s; white-space:nowrap;
+  }
+  .day-tab.active { background:var(--accent); border-color:var(--accent); color:#fff; }
+  .day-tab.today { border-color:var(--accent2); }
+  .day-tab.today:not(.active) { color:var(--accent2); }
+
+  /* Schedule */
+  .schedule-content { padding:14px 16px 100px; }
+
+  .schedule-day-label {
+    font-size:11px; font-weight:600; letter-spacing:.1em;
+    text-transform:uppercase; color:var(--text3);
+    font-family:'DM Mono',monospace;
+    margin-bottom:10px;
+    display:flex; align-items:center; gap:8px;
+  }
+  .today-badge {
+    background:rgba(56,217,169,.15);
+    color:var(--accent2); border-radius:99px;
+    font-size:9px; padding:2px 8px; letter-spacing:.08em;
+  }
+
+  .lab-card {
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:14px 16px;
+    margin-bottom:10px;
+    cursor:pointer;
+    transition:all .18s;
+    position:relative; overflow:hidden;
+  }
+  .lab-card:active { background:var(--surface2); transform:scale(.99); }
+  .lab-card.no-checklist { cursor:default; opacity:.6; }
+  .lab-card.no-checklist:active { transform:none; background:var(--surface); }
+  .lab-card.done-card { border-color:var(--done-border); background:var(--done-bg); }
+
+  .lab-card-accent {
+    position:absolute; left:0; top:0; bottom:0;
+    width:4px; border-radius:4px 0 0 4px;
+  }
+  .accent-nivel1 { background:var(--accent); }
+  .accent-nivel2 { background:var(--purple); }
+  .accent-completa { background:var(--accent2); }
+  .accent-none { background:var(--text3); }
+
+  .lab-card-inner { padding-left:12px; }
+  .lab-card-row {
+    display:flex; align-items:center;
+    justify-content:space-between; margin-bottom:4px;
+  }
+  .lab-name { font-size:15px; font-weight:700; color:var(--text); }
+  .lab-type-badge {
+    font-size:10px; font-family:'DM Mono',monospace;
+    padding:3px 9px; border-radius:99px; font-weight:500; letter-spacing:.04em;
+  }
+  .badge-nivel1 { background:rgba(79,140,255,.15); color:var(--accent); }
+  .badge-nivel2 { background:rgba(181,123,238,.15); color:var(--purple); }
+  .badge-completa { background:rgba(56,217,169,.15); color:var(--accent2); }
+  .badge-none { background:var(--surface2); color:var(--text3); }
+  .badge-done { background:rgba(56,217,169,.2); color:var(--accent2); }
+
+  .lab-time { font-family:'DM Mono',monospace; font-size:12px; color:var(--text3); }
+  .lab-note { font-size:11px; color:var(--text3); margin-top:2px; }
+  .lab-progress { display:flex; align-items:center; gap:8px; margin-top:8px; }
+  .lab-progress-bar { flex:1; height:4px; background:var(--surface2); border-radius:99px; overflow:hidden; }
+  .lab-progress-fill { height:100%; border-radius:99px; background:var(--accent2); transition:width .4s; }
+  .lab-progress-text { font-family:'DM Mono',monospace; font-size:10px; color:var(--text3); flex-shrink:0; }
+  .lab-arrow { position:absolute; right:14px; top:50%; transform:translateY(-50%); font-size:12px; color:var(--text3); }
+
+  /* ══════════════════════════════
+     CHECKLIST SCREEN
+  ══════════════════════════════ */
+  .checklist-header {
+    position:sticky; top:0; z-index:100;
+    background:rgba(15,17,23,0.97);
+    backdrop-filter:blur(18px);
+    border-bottom:1px solid var(--border);
+    padding:12px 16px 10px;
+  }
+  .checklist-header-row {
+    display:flex; align-items:center; gap:10px; margin-bottom:8px;
+  }
+  .back-btn {
+    background:none; border:1px solid var(--border);
+    color:var(--text2); font-family:'DM Sans',sans-serif;
+    font-size:13px; padding:5px 12px;
+    border-radius:99px; cursor:pointer; transition:all .2s; flex-shrink:0;
+  }
+  .back-btn:active { background:var(--surface2); color:var(--accent); }
+  .checklist-title-wrap { flex:1; min-width:0; }
+  .checklist-lab-name { font-size:15px; font-weight:700; color:var(--text); line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .checklist-type-tag {
+    font-family:'DM Mono',monospace;
+    font-size:10px; font-weight:500;
+    padding:2px 8px; border-radius:99px;
+    display:inline-block; margin-top:3px;
+  }
+  .tag-nivel1 { background:rgba(79,140,255,.15); color:var(--accent); }
+  .tag-nivel2 { background:rgba(181,123,238,.15); color:var(--purple); }
+  .tag-completa { background:rgba(56,217,169,.15); color:var(--accent2); }
+  .reset-btn {
+    background:none; border:1px solid var(--border);
+    color:var(--text3); font-family:'DM Sans',sans-serif;
+    font-size:13px; padding:5px 10px;
+    border-radius:20px; cursor:pointer; transition:all .2s; flex-shrink:0;
+  }
+  .reset-btn:active { background:var(--surface2); color:var(--danger); border-color:var(--danger); }
+
+  .progress-bar-wrap { background:var(--surface2); border-radius:99px; height:5px; overflow:hidden; }
+  .progress-bar-fill {
+    height:100%;
+    background:linear-gradient(90deg,var(--accent),var(--accent2));
+    border-radius:99px;
+    transition:width .4s cubic-bezier(.4,0,.2,1); width:0%;
+  }
+  .progress-label { display:flex; justify-content:space-between; align-items:center; margin-top:4px; }
+  .progress-label span { font-size:11px; color:var(--text3); font-family:'DM Mono',monospace; }
+  .progress-label .pct { color:var(--accent2); font-weight:600; }
+
+  /* ── Step indicator ── */
+  .step-indicator {
+    display:flex; align-items:center; gap:6px;
+    padding:6px 16px 0;
+    font-size:11px; color:var(--text3);
+    font-family:'DM Mono',monospace;
+  }
+  .step-dot {
+    width:6px; height:6px; border-radius:50%;
+    background:var(--surface2); border:1px solid var(--border);
+    transition:all .3s;
+    flex-shrink:0;
+  }
+  .step-dot.active { background:var(--accent); border-color:var(--accent); transform:scale(1.3); }
+  .step-dot.completed { background:var(--accent2); border-color:var(--accent2); }
+  .step-label { margin-left:4px; color:var(--text2); font-size:11px; }
+
+  /* Tabs */
+  .tabs {
+    display:flex; gap:6px; padding:10px 16px;
+    overflow-x:auto; scrollbar-width:none;
+    border-bottom:1px solid var(--border);
+    background:var(--bg);
+    position:sticky; top:126px; z-index:99;
+  }
+  .tabs::-webkit-scrollbar { display:none; }
+  .tab {
+    flex-shrink:0; padding:7px 14px;
+    border-radius:99px; border:1px solid var(--border);
+    background:none; color:var(--text2);
+    font-family:'DM Sans',sans-serif;
+    font-size:13px; font-weight:500;
+    cursor:pointer; transition:all .2s; white-space:nowrap;
+    display:flex; align-items:center; gap:6px;
+  }
+  .tab.active { background:var(--accent); border-color:var(--accent); color:#fff; }
+  .tab.tab-done { border-color:var(--done-border); color:var(--accent2); }
+  .tab.tab-done.active { background:var(--accent2); border-color:var(--accent2); color:#0f1117; }
+  .tab .badge {
+    display:inline-block; background:rgba(255,255,255,.2);
+    border-radius:99px; font-size:10px; padding:1px 6px;
+    font-family:'DM Mono',monospace;
+  }
+  .tab:not(.active) .badge { background:var(--surface2); color:var(--text3); }
+  .tab.tab-done:not(.active) .badge { background:rgba(56,217,169,.15); color:var(--accent2); }
+  .tab .tab-check { font-size:11px; }
+
+  /* Content */
+  .content { padding:12px 16px 110px; }
+  .section { margin-bottom:14px; }
+
+  /* Section header */
+  .section-header {
+    display:flex; align-items:center; gap:10px;
+    padding:12px 14px;
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:var(--radius) var(--radius) 0 0;
+    cursor:pointer; user-select:none;
+    transition:background .15s;
+  }
+  .section-header.collapsed { border-radius:var(--radius); }
+  .section-header:active { background:var(--surface2); }
+  .section-header.sec-done { background:var(--done-bg); border-color:var(--done-border); }
+  .section-num {
+    font-family:'DM Mono',monospace; font-size:10px; color:var(--accent);
+    background:rgba(79,140,255,.12); border-radius:6px;
+    padding:3px 7px; letter-spacing:.05em; flex-shrink:0;
+  }
+  .section-num.done { background:rgba(56,217,169,.12); color:var(--accent2); }
+  .section-title { flex:1; font-size:13px; font-weight:600; color:var(--text); }
+  .section-progress { font-family:'DM Mono',monospace; font-size:10px; color:var(--text3); flex-shrink:0; }
+  .section-progress.done { color:var(--accent2); }
+  .chevron { font-size:10px; color:var(--text3); transition:transform .25s; margin-left:2px; }
+  .collapsed .chevron { transform:rotate(-90deg); }
+
+  /* Mark all button */
+  .mark-all-btn {
+    padding:3px 10px; border-radius:99px;
+    border:1px solid var(--border);
+    background:none; color:var(--text3);
+    font-size:10px; font-family:'DM Mono',monospace;
+    cursor:pointer; transition:all .2s; flex-shrink:0;
+    white-space:nowrap;
+  }
+  .mark-all-btn:active { background:var(--surface2); color:var(--accent2); border-color:var(--accent2); }
+  .mark-all-btn.all-done { color:var(--accent2); border-color:var(--done-border); }
+
+  /* Section body */
+  .section-body {
+    border:1px solid var(--border); border-top:none;
+    border-radius:0 0 var(--radius) var(--radius); overflow:hidden;
+  }
+  .section-body.hidden { display:none; }
+
+  /* Item */
+  .item {
+    display:flex; align-items:flex-start; gap:12px;
+    padding:13px 14px;
+    background:var(--surface); border-bottom:1px solid var(--border);
+    cursor:pointer; transition:background .15s;
+    user-select:none; -webkit-user-select:none; position:relative;
+  }
+  .item:last-child { border-bottom:none; }
+  .item:active { background:var(--surface2); }
+  .item.checked { background:var(--done-bg); }
+
+  .checkbox {
+    flex-shrink:0; width:22px; height:22px; border-radius:7px;
+    border:2px solid var(--border); background:var(--surface2);
+    display:flex; align-items:center; justify-content:center;
+    transition:all .2s cubic-bezier(.4,0,.2,1);
+  }
+  .item.checked .checkbox { background:var(--accent2); border-color:var(--accent2); }
+  .checkmark { display:none; color:#0f1117; font-size:13px; font-weight:700; line-height:1; }
+  .item.checked .checkmark { display:block; }
+
+  .item-letter {
+    flex-shrink:0; font-family:'DM Mono',monospace;
+    font-size:10px; color:var(--text3); padding-top:3px; width:12px;
+  }
+  .item-text {
+    font-size:13.5px; line-height:1.5; color:var(--text); flex:1; transition:color .2s;
+  }
+  .item.checked .item-text {
+    color:var(--done-text);
+    text-decoration:line-through;
+    text-decoration-color:rgba(111,207,151,.4);
+  }
+
+  .ripple {
+    position:absolute; border-radius:50%;
+    background:rgba(79,140,255,.15); pointer-events:none;
+    animation:ripple-anim .5s ease-out forwards; transform:scale(0);
+  }
+  @keyframes ripple-anim { to { transform:scale(4); opacity:0; } }
+
+  /* ── Tab completion banner ── */
+  .tab-complete-banner {
+    display:none;
+    margin:0 0 14px;
+    padding:14px 16px;
+    background:var(--done-bg);
+    border:1px solid var(--done-border);
+    border-radius:var(--radius);
+    text-align:center;
+  }
+  .tab-complete-banner.visible { display:block; animation:fadeIn .4s ease; }
+  .tab-complete-banner h3 { font-size:15px; font-weight:700; color:var(--accent2); margin-bottom:4px; }
+  .tab-complete-banner p { font-size:12px; color:var(--text2); }
+  .next-tab-btn {
+    margin-top:10px;
+    padding:9px 20px; border-radius:99px;
+    border:none;
+    background:var(--accent2); color:#0f1117;
+    font-family:'DM Sans',sans-serif; font-size:13px; font-weight:700;
+    cursor:pointer; transition:opacity .2s;
+  }
+  .next-tab-btn:active { opacity:.8; }
+
+  @keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
+
+  /* Bottom bar */
+  .bottom-bar {
+    position:fixed; bottom:0; left:0; right:0;
+    padding:10px 16px 20px;
+    background:rgba(15,17,23,.97); backdrop-filter:blur(18px);
+    border-top:1px solid var(--border);
+    display:flex; align-items:center; justify-content:space-between;
+    gap:12px; z-index:200;
+  }
+  .bottom-stats { display:flex; gap:16px; }
+  .bstat { text-align:center; }
+  .bstat-val { font-family:'DM Mono',monospace; font-size:18px; font-weight:700; color:var(--accent); line-height:1; }
+  .bstat-val.done { color:var(--accent2); }
+  .bstat-label { font-size:10px; color:var(--text3); margin-top:2px; }
+
+  .complete-btn {
+    background:linear-gradient(135deg,var(--accent),var(--accent2));
+    border:none; color:#0f1117;
+    font-family:'DM Sans',sans-serif;
+    font-size:13px; font-weight:700;
+    padding:10px 18px; border-radius:99px;
+    cursor:pointer; transition:opacity .2s,transform .1s; white-space:nowrap;
+  }
+  .complete-btn:disabled { opacity:.35; background:var(--surface2); color:var(--text3); }
+  .complete-btn:active { transform:scale(.97); }
+
+  /* Modal */
+  .modal-overlay {
+    display:none; position:fixed; inset:0;
+    background:rgba(0,0,0,.75); backdrop-filter:blur(6px);
+    z-index:500; align-items:flex-end; justify-content:center;
+  }
+  .modal-overlay.open { display:flex; }
+  .modal {
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:20px 20px 0 0; width:100%; max-width:500px;
+    padding:20px 20px 36px;
+    animation:slideUp .3s cubic-bezier(.4,0,.2,1);
+  }
+  @keyframes slideUp { from { transform:translateY(100%); opacity:0; } to { transform:translateY(0); opacity:1; } }
+  .modal-handle { width:36px; height:4px; background:var(--border); border-radius:99px; margin:0 auto 20px; }
+  .modal h2 { font-size:18px; font-weight:700; margin-bottom:6px; text-align:center; }
+  .modal p { font-size:13px; color:var(--text2); text-align:center; margin-bottom:20px; }
+  .modal-emoji { font-size:48px; text-align:center; display:block; margin-bottom:12px; }
+  .modal-actions { display:flex; flex-direction:column; gap:10px; }
+  .modal-btn {
+    width:100%; padding:13px; border-radius:var(--radius);
+    border:none; font-family:'DM Sans',sans-serif;
+    font-size:14px; font-weight:600; cursor:pointer; transition:opacity .2s;
+  }
+  .modal-btn.primary { background:linear-gradient(135deg,var(--accent),var(--accent2)); color:#0f1117; }
+  .modal-btn.secondary { background:var(--surface2); color:var(--text2); border:1px solid var(--border); }
+  .modal-btn:active { opacity:.8; }
+
+  .pending-list {
+    background:var(--surface2); border-radius:var(--radius-sm);
+    padding:10px 14px; margin-bottom:16px;
+    max-height:180px; overflow-y:auto;
+  }
+  .pending-list p {
+    font-size:11px; color:var(--text3); margin-bottom:6px; text-align:left;
+    font-weight:600; letter-spacing:.05em; text-transform:uppercase;
+    font-family:'DM Mono',monospace;
+  }
+  .pending-item {
+    font-size:12px; color:var(--text2); padding:4px 0;
+    border-bottom:1px solid var(--border); text-align:left; line-height:1.4;
+  }
+  .pending-item:last-child { border-bottom:none; }
+  .section-tag {
+    display:inline-block; background:rgba(79,140,255,.1); color:var(--accent);
+    font-size:9px; font-family:'DM Mono',monospace;
+    padding:1px 5px; border-radius:4px; margin-right:5px;
+  }
+
+  /* ── Toast notification ── */
+  .toast-container { position:fixed; top:14px; left:50%; transform:translateX(-50%); z-index:9999; display:flex; flex-direction:column; align-items:center; gap:8px; pointer-events:none; }
+  .toast {
+    background:var(--surface2);
+    border:1px solid var(--border);
+    border-radius:99px;
+    padding:8px 18px;
+    font-size:13px; font-weight:600; color:var(--text);
+    display:flex; align-items:center; gap:8px;
+    animation:toastIn .3s cubic-bezier(.4,0,.2,1);
+    pointer-events:none; white-space:nowrap;
+    box-shadow:0 4px 24px rgba(0,0,0,.4);
+  }
+  .toast.success { border-color:var(--done-border); color:var(--accent2); background:var(--done-bg); }
+  .toast.info { border-color:var(--accent); color:var(--accent); }
+  .toast.out { animation:toastOut .3s ease forwards; }
+  @keyframes toastIn { from { opacity:0; transform:translateY(-10px) scale(.95); } to { opacity:1; transform:none; } }
+  @keyframes toastOut { to { opacity:0; transform:translateY(-10px) scale(.95); } }
+
+  /* ── WhatsApp share button ── */
+  .wa-btn {
+    display:flex; align-items:center; gap:8px;
+    width:100%; padding:13px; border-radius:var(--radius);
+    border:1px solid #25d366;
+    background:rgba(37,211,102,.08);
+    color:#25d366;
+    font-family:'DM Sans',sans-serif;
+    font-size:14px; font-weight:600; cursor:pointer; transition:opacity .2s;
+    text-align:center; justify-content:center;
+  }
+  .wa-btn:active { opacity:.8; }
+
+  /* ══════════════════════════════
+     DEFEITO FAB
+  ══════════════════════════════ */
+  .defeito-fab {
+    position:fixed; bottom:80px; right:16px;
+    width:46px; height:46px; border-radius:50%;
+    border:none; cursor:pointer; z-index:190;
+    background:linear-gradient(135deg,var(--danger),#c0392b);
+    color:#fff; font-size:20px;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:0 4px 18px rgba(255,107,107,.45);
+    transition:transform .15s, opacity .2s;
+  }
+  .defeito-fab:active { transform:scale(.93); }
+  .defeito-fab.has-open { box-shadow:0 4px 18px rgba(255,107,107,.7); }
+  .defeito-fab-badge {
+    position:absolute; top:-4px; right:-4px;
+    background:var(--orange); color:#0f1117;
+    font-size:9px; font-weight:700; font-family:'DM Mono',monospace;
+    border-radius:99px; min-width:16px; height:16px;
+    display:flex; align-items:center; justify-content:center;
+    padding:0 4px; border:2px solid var(--bg);
+  }
+
+  /* ══════════════════════════════
+     DEFEITO MODAL
+  ══════════════════════════════ */
+  .defeito-overlay {
+    display:none; position:fixed; inset:0;
+    background:rgba(0,0,0,.82); backdrop-filter:blur(8px);
+    z-index:600; align-items:flex-end; justify-content:center;
+  }
+  .defeito-overlay.open { display:flex; }
+  .defeito-sheet {
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:20px 20px 0 0; width:100%; max-width:500px;
+    max-height:90vh; display:flex; flex-direction:column;
+    animation:slideUp .3s cubic-bezier(.4,0,.2,1);
+  }
+  .defeito-sheet-head {
+    padding:16px 20px 12px; border-bottom:1px solid var(--border);
+    flex-shrink:0;
+  }
+  .defeito-handle { width:36px; height:4px; background:var(--border); border-radius:99px; margin:0 auto 14px; }
+  .defeito-sheet-head-row {
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .defeito-sheet-title { font-size:15px; font-weight:700; color:var(--text); }
+  .defeito-close-btn {
+    background:none; border:1px solid var(--border);
+    color:var(--text3); font-size:13px; padding:4px 10px;
+    border-radius:99px; cursor:pointer; font-family:'DM Sans',sans-serif;
+  }
+  .defeito-close-btn:active { color:var(--danger); border-color:var(--danger); }
+
+  .defeito-sheet-body { flex:1; overflow-y:auto; padding:16px 20px; }
+
+  /* Form */
+  .defeito-form { margin-bottom:20px; }
+  .defeito-form-label {
+    font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase;
+    color:var(--text3); font-family:'DM Mono',monospace; display:block; margin-bottom:6px;
+  }
+  .defeito-input {
+    width:100%; background:var(--surface2); border:1px solid var(--border);
+    border-radius:var(--radius-sm); color:var(--text);
+    font-family:'DM Sans',sans-serif; font-size:13px;
+    padding:10px 12px; resize:none; outline:none;
+    transition:border-color .2s;
+  }
+  .defeito-input:focus { border-color:var(--accent); }
+  .defeito-input::placeholder { color:var(--text3); }
+
+  .defeito-file-wrap {
+    border:1.5px dashed var(--border); border-radius:var(--radius-sm);
+    padding:14px; text-align:center; cursor:pointer;
+    transition:border-color .2s, background .2s;
+    position:relative; margin-bottom:10px;
+  }
+  .defeito-file-wrap:hover { border-color:var(--accent); background:rgba(79,140,255,.04); }
+  .defeito-file-wrap input[type=file] {
+    position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%;
+  }
+  .defeito-file-label { font-size:12px; color:var(--text3); pointer-events:none; }
+  .defeito-file-preview {
+    width:100%; max-height:140px; object-fit:cover;
+    border-radius:var(--radius-sm); margin-top:8px; display:none;
+    border:1px solid var(--border);
+  }
+
+  .defeito-pc-wrap { margin-bottom:10px; }
+  .defeito-pc-select {
+    width:100%; background:var(--surface2); border:1px solid var(--border);
+    border-radius:var(--radius-sm); color:var(--text);
+    font-family:'DM Sans',sans-serif; font-size:13px;
+    padding:10px 12px; outline:none; cursor:pointer;
+  }
+  .defeito-pc-select:focus { border-color:var(--accent); }
+
+  .defeito-submit-btn {
+    width:100%; padding:12px; border-radius:var(--radius);
+    border:none; background:var(--danger); color:#fff;
+    font-family:'DM Sans',sans-serif; font-size:14px; font-weight:700;
+    cursor:pointer; transition:opacity .2s; margin-top:4px;
+  }
+  .defeito-submit-btn:active { opacity:.8; }
+  .defeito-submit-btn:disabled { opacity:.4; cursor:default; }
+
+  /* Defeito list */
+  .defeito-list-title {
+    font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase;
+    color:var(--text3); font-family:'DM Mono',monospace;
+    margin-bottom:10px; display:flex; align-items:center; gap:8px;
+  }
+  .defeito-count-badge {
+    background:var(--surface2); color:var(--text3);
+    font-size:9px; padding:2px 7px; border-radius:99px;
+    font-family:'DM Mono',monospace;
+  }
+  .defeito-empty {
+    text-align:center; padding:24px 0;
+    font-size:13px; color:var(--text3);
+  }
+  .defeito-card {
+    background:var(--surface2); border:1px solid var(--border);
+    border-radius:var(--radius-sm); padding:12px; margin-bottom:10px;
+    position:relative;
+  }
+  .defeito-card-head {
+    display:flex; align-items:flex-start; justify-content:space-between; gap:8px; margin-bottom:8px;
+  }
+  .defeito-card-meta { display:flex; flex-direction:column; gap:2px; flex:1; min-width:0; }
+  .defeito-card-pc {
+    font-size:11px; font-family:'DM Mono',monospace;
+    color:var(--accent); font-weight:600;
+  }
+  .defeito-card-date { font-size:10px; color:var(--text3); font-family:'DM Mono',monospace; }
+  .defeito-status-badge {
+    flex-shrink:0; font-size:9px; font-family:'DM Mono',monospace;
+    font-weight:700; letter-spacing:.06em; text-transform:uppercase;
+    padding:3px 9px; border-radius:99px; cursor:pointer;
+    transition:all .2s; border:1px solid transparent;
+  }
+  .defeito-status-badge.pendente {
+    background:rgba(255,170,68,.12); color:var(--orange); border-color:rgba(255,170,68,.3);
+  }
+  .defeito-status-badge.consertado {
+    background:rgba(56,217,169,.12); color:var(--accent2); border-color:rgba(56,217,169,.3);
+  }
+  .defeito-card-img {
+    width:100%; max-height:160px; object-fit:cover;
+    border-radius:6px; margin-bottom:8px; border:1px solid var(--border);
+  }
+  .defeito-card-desc { font-size:13px; color:var(--text2); line-height:1.5; }
+  .defeito-delete-btn {
+    position:absolute; top:8px; right:8px;
+    background:none; border:none; color:var(--text3);
+    font-size:14px; cursor:pointer; padding:4px 6px;
+    border-radius:6px; transition:color .2s, background .2s;
+    /* hidden by default, shown on card hover */
+    opacity:0.4;
+  }
+  .defeito-delete-btn:hover { color:var(--danger); opacity:1; background:rgba(255,107,107,.1); }
+
+
+  /* ══════════════════════════════
+     BOTTOM NAV
+  ══════════════════════════════ */
+  .bottom-nav {
+    position:fixed; bottom:0; left:0; right:0; z-index:300;
+    background:rgba(15,17,23,.97); backdrop-filter:blur(18px);
+    border-top:1px solid var(--border);
+    display:flex; align-items:stretch;
+    padding-bottom:env(safe-area-inset-bottom,0px);
+  }
+  .nav-btn {
+    flex:1; display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+    padding:10px 4px 8px; border:none; background:none; cursor:pointer;
+    color:var(--text3); font-family:'DM Sans',sans-serif;
+    font-size:10px; font-weight:600; letter-spacing:.04em;
+    gap:4px; transition:color .2s; position:relative;
+  }
+  .nav-btn.active { color:var(--accent); }
+  .nav-btn.nav-fotos.active { color:var(--orange); }
+  .nav-btn.nav-reporte.active { color:var(--danger); }
+  .nav-icon { font-size:20px; line-height:1; }
+  .nav-badge {
+    position:absolute; top:6px; right:calc(50% - 16px);
+    background:var(--danger); color:#fff;
+    font-size:9px; font-weight:700; font-family:'DM Mono',monospace;
+    min-width:16px; height:16px; border-radius:99px;
+    display:none; align-items:center; justify-content:center; padding:0 4px;
+  }
+  /* ajusta bottom-bar do checklist para ficar acima da nav */
+  .bottom-bar { bottom:60px !important; }
+  .defeito-fab { bottom:130px !important; }
+
+  /* ══════════════════════════════
+     FOTOS DOS POSTOS
+  ══════════════════════════════ */
+  .fotos-header {
+    position:sticky; top:0; z-index:100;
+    background:rgba(15,17,23,.97); backdrop-filter:blur(18px);
+    border-bottom:1px solid var(--border); padding:14px 16px 12px;
+  }
+  .fotos-title-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+  .fotos-title { font-size:17px; font-weight:700; }
+  .fotos-sub { font-size:12px; color:var(--text3); }
+  .fotos-lab-tabs { display:flex; gap:6px; overflow-x:auto; scrollbar-width:none; }
+  .fotos-lab-tabs::-webkit-scrollbar { display:none; }
+  .fotos-lab-tab {
+    flex-shrink:0; padding:6px 14px; border-radius:99px;
+    border:1px solid var(--border); background:none; color:var(--text2);
+    font-size:12px; font-weight:600; cursor:pointer; transition:all .2s;
+    font-family:'DM Sans',sans-serif;
+  }
+  .fotos-lab-tab.active { background:var(--orange); border-color:var(--orange); color:#0f1117; }
+  .fotos-content { padding:14px 16px 20px; }
+  .fotos-section-label {
+    font-size:11px; font-weight:600; letter-spacing:.1em; text-transform:uppercase;
+    color:var(--text3); font-family:'DM Mono',monospace; margin-bottom:10px;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .fotos-count { font-size:11px; color:var(--accent2); font-family:'DM Mono',monospace; }
+  .posto-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px; margin-bottom:20px; }
+  .posto-card {
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:var(--radius-sm); overflow:hidden; cursor:pointer;
+    transition:all .18s; position:relative;
+  }
+  .posto-card:active { transform:scale(.97); }
+  .posto-card.has-foto { border-color:rgba(255,170,68,.35); }
+  .posto-thumb { width:100%; aspect-ratio:4/3; object-fit:cover; display:block; background:var(--surface2); }
+  .posto-thumb-empty {
+    width:100%; aspect-ratio:4/3; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; background:var(--surface2); gap:6px;
+  }
+  .posto-thumb-icon { font-size:22px; color:var(--text3); }
+  .posto-thumb-txt { font-size:10px; color:var(--text3); }
+  .posto-label { padding:7px 10px; }
+  .posto-num { font-family:'DM Mono',monospace; font-size:11px; font-weight:600; color:var(--text); display:block; }
+  .posto-date { font-size:10px; color:var(--text3); margin-top:1px; }
+  .posto-dot { position:absolute; top:6px; right:6px; width:8px; height:8px; border-radius:50%; background:var(--orange); }
+
+  /* Drive connect */
+  .drive-connect-wrap {
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:48px 24px; gap:14px; text-align:center;
+  }
+  .drive-connect-icon { font-size:48px; }
+  .drive-connect-title { font-size:16px; font-weight:700; color:var(--text); }
+  .drive-connect-sub { font-size:13px; color:var(--text3); line-height:1.5; }
+  .drive-connect-btn {
+    margin-top:8px; padding:12px 28px; border-radius:99px;
+    background:linear-gradient(135deg,var(--orange),#ff8c42);
+    border:none; color:#0f1117; font-family:'DM Sans',sans-serif;
+    font-size:14px; font-weight:700; cursor:pointer; transition:opacity .2s;
+  }
+  .drive-connect-btn:active { opacity:.8; }
+  .drive-token-info {
+    display:flex; align-items:center; gap:8px;
+    padding:8px 14px; background:rgba(56,217,169,.08);
+    border:1px solid rgba(56,217,169,.2); border-radius:99px;
+    font-size:11px; color:var(--accent2); font-family:'DM Mono',monospace;
+    margin-bottom:12px;
+  }
+
+  /* Modal foto */
+  .foto-modal-overlay {
+    display:none; position:fixed; inset:0;
+    background:rgba(0,0,0,.85); z-index:600;
+    align-items:flex-end; justify-content:center;
+  }
+  .foto-modal-overlay.open { display:flex; }
+  .foto-modal {
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:20px 20px 0 0; width:100%; max-width:500px;
+    padding:16px 16px 32px;
+    animation:slideUp .3s cubic-bezier(.4,0,.2,1);
+    position:relative;
+  }
+  .foto-modal-handle { width:40px; height:4px; border-radius:99px; background:var(--border); margin:0 auto 14px; }
+  .foto-modal-title { font-size:15px; font-weight:700; margin-bottom:4px; }
+  .foto-modal-sub { font-size:12px; color:var(--text3); margin-bottom:14px; }
+  .foto-modal-tabs { display:flex; gap:8px; margin-bottom:14px; }
+  .foto-tab-btn {
+    flex:1; padding:8px; border-radius:var(--radius-sm);
+    border:1px solid var(--border); background:none; color:var(--text2);
+    font-size:12px; font-weight:600; cursor:pointer;
+    font-family:'DM Sans',sans-serif; transition:all .2s;
+  }
+  .foto-tab-btn.active { background:var(--orange); border-color:var(--orange); color:#0f1117; }
+  .foto-preview-area {
+    width:100%; aspect-ratio:4/3; object-fit:cover;
+    border-radius:var(--radius-sm); border:1px solid var(--border);
+    background:var(--surface2); display:block; margin-bottom:12px;
+  }
+  .foto-empty-area {
+    width:100%; aspect-ratio:4/3; display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+    border-radius:var(--radius-sm); border:1px dashed var(--border);
+    background:var(--surface2); gap:8px; margin-bottom:12px;
+    color:var(--text3); font-size:13px;
+  }
+  .foto-upload-btn {
+    width:100%; padding:12px; border-radius:99px;
+    background:var(--surface2); border:1px solid var(--border); color:var(--text2);
+    font-family:'DM Sans',sans-serif; font-size:13px; font-weight:600;
+    cursor:pointer; margin-bottom:8px; position:relative; overflow:hidden;
+  }
+  .foto-upload-btn input { position:absolute; inset:0; opacity:0; cursor:pointer; }
+  .foto-save-btn {
+    width:100%; padding:12px; border-radius:99px;
+    background:linear-gradient(135deg,var(--orange),#ff8c42);
+    border:none; color:#0f1117; font-family:'DM Sans',sans-serif;
+    font-size:13px; font-weight:700; cursor:pointer;
+  }
+  .foto-save-btn:disabled { opacity:.4; background:var(--surface2); color:var(--text3); }
+  .foto-delete-btn {
+    width:100%; padding:10px; border-radius:99px; background:none;
+    border:1px solid rgba(255,107,107,.3); color:var(--danger);
+    font-family:'DM Sans',sans-serif; font-size:13px; cursor:pointer; margin-top:6px;
+  }
+  .foto-modal-close {
+    position:absolute; top:16px; right:16px;
+    background:none; border:none; color:var(--text3); font-size:18px; cursor:pointer;
+  }
+  .foto-loading-overlay {
+    position:absolute; inset:0; background:rgba(15,17,23,.8);
+    border-radius:20px 20px 0 0; display:none;
+    align-items:center; justify-content:center; z-index:10;
+  }
+  .foto-loading-overlay.active { display:flex; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .spinner { width:36px; height:36px; border:3px solid rgba(255,170,68,.2); border-top:3px solid var(--orange); border-radius:50%; animation:spin 1s linear infinite; }
+
+  /* ══════════════════════════════
+     REPORTE TI
+  ══════════════════════════════ */
+  .reporte-content { padding:16px 16px 20px; }
+  .reporte-header-card {
+    background:linear-gradient(135deg,#c0392b,#a93226);
+    border-radius:var(--radius); padding:20px; margin-bottom:20px; text-align:center;
+  }
+  .reporte-header-card h1 { font-size:22px; font-weight:700; margin-bottom:4px; }
+  .reporte-header-card p { font-size:13px; color:rgba(255,255,255,.8); }
+  .r-form-group { margin-bottom:16px; }
+  .r-label {
+    display:block; font-size:11px; font-weight:600; color:var(--text3);
+    letter-spacing:.06em; text-transform:uppercase;
+    font-family:'DM Mono',monospace; margin-bottom:8px;
+  }
+  .r-input {
+    width:100%; background:var(--surface); border:1px solid var(--border);
+    color:var(--text); font-family:'DM Sans',sans-serif;
+    font-size:15px; padding:12px 14px; border-radius:var(--radius-sm);
+    outline:none; -webkit-appearance:none; appearance:none; box-sizing:border-box;
+  }
+  .r-input:focus { border-color:var(--danger); }
+  select.r-input {
+    background-image:url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238b90b0' stroke-width='2'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat:no-repeat; background-position:right 12px center;
+    background-size:18px; padding-right:36px;
+  }
+  textarea.r-input { resize:vertical; min-height:90px; }
+  .r-file-wrap {
+    border:1px dashed var(--border); border-radius:var(--radius-sm);
+    padding:14px; text-align:center; cursor:pointer; position:relative; overflow:hidden;
+  }
+  .r-file-wrap input[type=file] { position:absolute; inset:0; opacity:0; cursor:pointer; font-size:0; }
+  .r-file-label { font-size:13px; color:var(--text3); pointer-events:none; }
+  .r-preview { width:100%; max-height:180px; object-fit:cover; border-radius:var(--radius-sm); margin-top:10px; border:1px solid var(--border); display:none; }
+  .r-info {
+    background:rgba(79,140,255,.08); border-left:3px solid var(--accent);
+    border-radius:0 var(--radius-sm) var(--radius-sm) 0;
+    padding:12px 14px; margin-bottom:16px;
+  }
+  .r-info p { font-size:12px; color:var(--text2); line-height:1.5; margin:0; }
+  .r-submit-btn {
+    width:100%; padding:14px; border-radius:99px;
+    background:linear-gradient(135deg,#e74c3c,#c0392b);
+    border:none; color:#fff; font-family:'DM Sans',sans-serif;
+    font-size:15px; font-weight:700; cursor:pointer; margin-top:8px;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+  }
+  .r-submit-btn:active { opacity:.85; }
+  .r-submit-btn:disabled { opacity:.5; cursor:not-allowed; }
+  .r-loading {
+    display:none; position:fixed; inset:0; background:rgba(0,0,0,.6);
+    z-index:800; align-items:center; justify-content:center;
+  }
+  .r-loading.active { display:flex; }
+  .r-spinner { width:44px; height:44px; border:3px solid rgba(231,76,60,.2); border-top:3px solid var(--danger); border-radius:50%; animation:spin 1s linear infinite; }
+</style>
+</head>
+<body>
+
+<!-- TOAST -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- LOADING Reporte -->
+<div class="r-loading" id="rLoading"><div class="r-spinner"></div></div>
+
+<!-- ══════════ CHECKLIST SCREENS (original intacto) ══════════ -->
+
+<!-- ══════════════════════════ HOME ══════════════════════════ -->
+<div class="screen active" id="screen-home">
+  <div class="home-header">
+    <div class="home-header-row">
+      <span class="logo">CSE · Lab Check</span>
+      <span class="home-date" id="homeDate"></span>
+    </div>
+    <div class="home-title">Cronograma</div>
+    <div class="home-sub">Igor &amp; Kayky · Selecione o laboratório</div>
+  </div>
+  <div class="day-tabs" id="dayTabs"></div>
+  <div class="schedule-content" id="scheduleContent"></div>
+</div>
+
+<!-- ══════════════════════════ CHECKLIST ══════════════════════════ -->
+<div class="screen" id="screen-checklist">
+  <div class="checklist-header">
+    <div class="checklist-header-row">
+      <button class="back-btn" onclick="goHome()">← Voltar</button>
+      <div class="checklist-title-wrap">
+        <div class="checklist-lab-name" id="clLabName">LAB 01</div>
+        <span class="checklist-type-tag" id="clTypeTag">Nível I</span>
+      </div>
+      <button class="reset-btn" onclick="resetChecklist()" title="Limpar tudo">↺</button>
+    </div>
+    <div class="progress-bar-wrap">
+      <div class="progress-bar-fill" id="progressBar"></div>
+    </div>
+    <div class="progress-label">
+      <span id="progressText">0 / 0 itens</span>
+      <span class="pct" id="progressPct">0%</span>
+    </div>
+  </div>
+
+  <!-- step dots -->
+  <div class="step-indicator" id="stepIndicator"></div>
+
+  <div class="tabs" id="tabsContainer"></div>
+  <div class="content" id="content"></div>
+
+  <div class="bottom-bar">
+    <div class="bottom-stats">
+      <div class="bstat">
+        <div class="bstat-val done" id="statDone">0</div>
+        <div class="bstat-label">feitos</div>
+      </div>
+      <div class="bstat">
+        <div class="bstat-val" id="statPending">0</div>
+        <div class="bstat-label">pendentes</div>
+      </div>
+    </div>
+    <button class="complete-btn" id="completeBtn" onclick="openModal()">Finalizar ✓</button>
+  </div>
+</div>
+
+<!-- Defeito FAB (only visible on checklist screen) -->
+<button class="defeito-fab" id="defeitoFab" onclick="openDefeitoModal()" style="display:none" title="Registrar Defeito">
+  ⚠
+  <span class="defeito-fab-badge" id="defeitoFabBadge" style="display:none">0</span>
+</button>
+
+<!-- Defeito Modal -->
+<div class="defeito-overlay" id="defeitoOverlay" onclick="closeDefeitoOutside(event)">
+  <div class="defeito-sheet">
+    <div class="defeito-sheet-head">
+      <div class="defeito-handle"></div>
+      <div class="defeito-sheet-head-row">
+        <span class="defeito-sheet-title" id="defeitoSheetTitle">⚠ Defeitos · LAB 01</span>
+        <button class="defeito-close-btn" onclick="closeDefeitoModal()">Fechar</button>
+      </div>
+    </div>
+    <div class="defeito-sheet-body">
+
+      <!-- FORM -->
+      <div class="defeito-form">
+        <div class="defeito-pc-wrap">
+          <label class="defeito-form-label">Posição / PC</label>
+          <select class="defeito-pc-select" id="defeitoPcSelect">
+            <option value="">— Selecione o PC ou local —</option>
+          </select>
+        </div>
+
+        <label class="defeito-form-label">Foto do defeito</label>
+        <div class="defeito-file-wrap" id="defeitoFileWrap">
+          <input type="file" accept="image/*" capture="environment" id="defeitoFileInput" onchange="handleDefeitoPhoto(event)">
+          <span class="defeito-file-label" id="defeitoFileLabel">📷 Toque para tirar foto ou selecionar</span>
+          <img class="defeito-file-preview" id="defeitoFilePreview" alt="preview">
+        </div>
+
+        <label class="defeito-form-label" style="margin-top:10px">Descrição do problema</label>
+        <textarea class="defeito-input" id="defeitoDescInput" rows="3"
+          placeholder="Ex: Monitor sem imagem, teclado com tecla faltando, cadeira quebrada..."></textarea>
+
+        <button class="defeito-submit-btn" id="defeitoSubmitBtn" onclick="salvarDefeito()">
+          Registrar Defeito
+        </button>
+      </div>
+
+      <!-- LIST -->
+      <div class="defeito-list-title">
+        Defeitos registrados
+        <span class="defeito-count-badge" id="defeitoListCount">0</span>
+      </div>
+      <div id="defeitoListContainer">
+        <div class="defeito-empty">Nenhum defeito registrado ainda.</div>
+      </div>
+
+    </div><!-- /body -->
+  </div><!-- /sheet -->
+</div><!-- /overlay -->
+
+<!-- Modal -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModalOutside(event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <span class="modal-emoji" id="modalEmoji">✅</span>
+    <h2 id="modalTitle">Checklist completo!</h2>
+    <p id="modalDesc"></p>
+    <div id="pendingListContainer"></div>
+    <div class="modal-actions">
+      <button class="modal-btn primary" onclick="closeModal()">OK, entendido</button>
+      <button class="wa-btn" id="waShareBtn" onclick="shareWhatsApp()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+        Compartilhar no WhatsApp
+      </button>
+      <button class="modal-btn secondary" id="modalSecBtn" onclick="resetChecklist(); closeModal()">Reiniciar checklist</button>
+    </div>
+  </div>
+</div>
+
+
+
+<!-- ══════════ FOTOS DOS POSTOS ══════════ -->
+<div class="screen" id="screen-fotos">
+  <div class="fotos-header">
+    <div class="fotos-title-row">
+      <div>
+        <div class="fotos-title">📸 Fotos dos Postos</div>
+        <div class="fotos-sub">Referência visual · 2 fotos por posto</div>
+      </div>
+    </div>
+    <div id="driveTokenInfo" style="display:none" class="drive-token-info">
+      ✓ Drive conectado · <span id="driveMinLeft"></span>min restantes
+      &nbsp;·&nbsp; <span style="cursor:pointer;text-decoration:underline" onclick="driveLogout()">sair</span>
+    </div>
+    <div class="fotos-lab-tabs" id="fotosLabTabs"></div>
+  </div>
+  <div class="fotos-content" id="fotosContent"></div>
+</div>
+
+<!-- Modal de foto -->
+<div class="foto-modal-overlay" id="fotoModalOverlay" onclick="closeFotoModalOutside(event)">
+  <div class="foto-modal">
+    <div class="foto-loading-overlay" id="fotoLoadingOverlay"><div class="spinner"></div></div>
+    <button class="foto-modal-close" onclick="closeFotoModal()">✕</button>
+    <div class="foto-modal-handle"></div>
+    <div class="foto-modal-title" id="fotoModalTitle">Posto 01</div>
+    <div class="foto-modal-sub" id="fotoModalSub">LAB 01 · Selecione o tipo</div>
+    <div class="foto-modal-tabs">
+      <button class="foto-tab-btn active" id="fotoTabFrente"  onclick="switchFotoTab('frente')">📷 Frente</button>
+      <button class="foto-tab-btn"        id="fotoTabDetalhe" onclick="switchFotoTab('detalhe')">🔍 Detalhe</button>
+    </div>
+    <img   class="foto-preview-area" id="fotoPreviewImg" alt="foto" style="display:none">
+    <div   class="foto-empty-area"   id="fotoEmptyArea"><span style="font-size:32px">📷</span><span>Nenhuma foto ainda</span></div>
+    <label class="foto-upload-btn">
+      📸 Tirar foto / selecionar
+      <input type="file" accept="image/*" capture="environment" id="fotoUploadInput" onchange="handleFotoUpload(event)">
+    </label>
+    <button class="foto-save-btn"   id="fotoSaveBtn"   onclick="salvarFoto()"  disabled>Salvar foto</button>
+    <button class="foto-delete-btn" id="fotoDeleteBtn" onclick="deletarFoto()" style="display:none">Remover foto</button>
+  </div>
+</div>
+
+<!-- ══════════ REPORTE TI ══════════ -->
+<div class="screen" id="screen-reporte">
+  <div class="reporte-content">
+    <div class="reporte-header-card">
+      <h1>🔧 TI Reporte</h1>
+      <p>Reporte + WhatsApp Automático</p>
+    </div>
+    <div class="r-info">
+      <p>💡 Após enviar, o WhatsApp abrirá com o reporte formatado e pronto para enviar.</p>
+    </div>
+    <div class="r-form-group">
+      <label class="r-label">📍 Laboratório</label>
+      <select id="rLab" class="r-input">
+        <option value="">Selecione um laboratório</option>
+        <option value="LAB 01">Laboratório 01</option>
+        <option value="LAB 02">Laboratório 02</option>
+        <option value="LAB 03">Laboratório 03</option>
+        <option value="LAB 04">Laboratório 04</option>
+      </select>
+    </div>
+    <div class="r-form-group">
+      <label class="r-label">💻 Número do PC</label>
+      <input type="number" id="rPc" class="r-input" min="1" max="41" placeholder="1 a 41">
+    </div>
+    <div class="r-form-group">
+      <label class="r-label">⚙️ Tipo de Problema</label>
+      <select id="rTipo" class="r-input">
+        <option value="">Selecione</option>
+        <option value="Periféricos">Periféricos (Teclado, Mouse, etc)</option>
+        <option value="Monitor / Vídeo">Monitor / Vídeo</option>
+        <option value="Hardware Interno">Hardware Interno (CPU, RAM, etc)</option>
+        <option value="Software / Rede">Software / Rede</option>
+        <option value="Estrutura / Mobiliário">Estrutura / Mobiliário</option>
+        <option value="Outro">Outro</option>
+      </select>
+    </div>
+    <div class="r-form-group">
+      <label class="r-label">📝 Descrição</label>
+      <textarea id="rDesc" class="r-input" placeholder="Descreva o problema em detalhes..."></textarea>
+    </div>
+    <div class="r-form-group">
+      <label class="r-label">📸 Foto do Problema</label>
+      <div class="r-file-wrap">
+        <input type="file" accept="image/*" capture="environment" id="rFoto" onchange="handleRFoto(event)">
+        <span class="r-file-label" id="rFotoLabel">📷 Toque para tirar foto ou selecionar</span>
+      </div>
+      <img class="r-preview" id="rPreview" alt="preview">
+    </div>
+    <button class="r-submit-btn" id="rSubmitBtn" onclick="submitReporte()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+      Enviar via WhatsApp
+    </button>
+  </div>
+</div>
+
+<!-- ══════════ BOTTOM NAV ══════════ -->
+<nav class="bottom-nav">
+  <button class="nav-btn active" id="navChecklist" onclick="navTo('home')">
+    <span class="nav-icon">✅</span>Checklist
+  </button>
+  <button class="nav-btn nav-fotos" id="navFotos" onclick="navTo('fotos')">
+    <span class="nav-icon">📸</span>Fotos
+    <span class="nav-badge" id="fotosBadge"></span>
+  </button>
+  <button class="nav-btn nav-reporte" id="navReporte" onclick="navTo('reporte')">
+    <span class="nav-icon">🔧</span>Reporte
+  </button>
+</nav>
+
+<script>
+// ══════════════════════════════════════════════
+// CONFIG — preencha após configurar Google Cloud
+// ══════════════════════════════════════════════
+const CFG = {
+  CLIENT_ID:    'SEU_CLIENT_ID_AQUI.apps.googleusercontent.com',
+  REDIRECT_URI: window.location.origin + window.location.pathname,
+  SCOPES:       'https://www.googleapis.com/auth/drive',
+  PASTAS: {
+    'LAB 01': 'ID_PASTA_LAB01',
+    'LAB 02': 'ID_PASTA_LAB02',
+    'LAB 03': 'ID_PASTA_LAB03',
+    'LAB 04': 'ID_PASTA_LAB04',
+  },
+  NUMERO_TI: '5519900000000',  // WhatsApp TI (DDI+DDD+número, sem +)
+  WEB_APP_URL: '',             // URL do Google Apps Script (opcional)
+};
+
+// ══════════════════════════════════════════════
+// NAVEGAÇÃO
+// ══════════════════════════════════════════════
+let currentNav = 'home';
+
+function navTo(section) {
+  currentNav = section;
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+
+  if (section === 'home') {
+    document.getElementById('navChecklist').classList.add('active');
+    showScreen('screen-home');
+    document.getElementById('defeitoFab').style.display = 'none';
+  } else if (section === 'fotos') {
+    document.getElementById('navFotos').classList.add('active');
+    showScreen('screen-fotos');
+    document.getElementById('defeitoFab').style.display = 'none';
+    initFotos();
+  } else if (section === 'reporte') {
+    document.getElementById('navReporte').classList.add('active');
+    showScreen('screen-reporte');
+    document.getElementById('defeitoFab').style.display = 'none';
+  }
+}
+
+// ══════════════════════════════════════════════
+// CHECKLIST JS (original da v4 intacto)
+// ══════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════════
+const DAYS = [
+  { key:'seg', label:'SEG', fullLabel:'Segunda-feira' },
+  { key:'ter', label:'TER', fullLabel:'Terça-feira' },
+  { key:'qua', label:'QUA', fullLabel:'Quarta-feira' },
+  { key:'qui', label:'QUI', fullLabel:'Quinta-feira' },
+  { key:'sex', label:'SEX', fullLabel:'Sexta-feira' }
+];
+
+const SCHEDULE = {
+  seg: [
+    { lab:'LAB 01', time:'12:30–13:25', type:'nivel1', note:'' },
+    { lab:'LAB 02', time:'14:35–15:20', type:'nivel1', note:'Desligamento' },
+    { lab:'LAB 03', time:'15:35–16:20', type:'nivel1', note:'Desligamento' },
+    { lab:'LAB 04', time:'16:20–17:05', type:'nivel1', note:'Desligamento' },
+  ],
+  ter: [
+    { lab:'LAB 02', time:'14:00–15:15', type:'completa', note:'Desligamento' },
+    { lab:'LAB 03', time:'15:30–16:45', type:'completa', note:'Desligamento' },
+    { lab:'LAB 04', time:'16:45–18:00', type:'completa', note:'Desligamento' },
+  ],
+  qua: [
+    { lab:'LAB 02', time:'15:30–16:15', type:'nivel1', note:'Desligamento' },
+    { lab:'LAB 03', time:'16:15–17:00', type:'nivel1', note:'Desligamento' },
+    { lab:'LAB 04', time:'17:00–17:45', type:'nivel1', note:'Desligamento' },
+    { lab:'LAB 01', time:'17:45–17:55', type:null,     note:'Só desligamento · recolher chave' },
+  ],
+  qui: [
+    { lab:'LAB 02', time:'13:15–14:00', type:'nivel1', note:'' },
+    { lab:'LAB 03', time:'15:35–16:20', type:'nivel1', note:'Desligamento' },
+    { lab:'LAB 01', time:'16:20–17:05', type:'nivel1', note:'Desligamento · recolher chave' },
+    { lab:'LAB 04', time:'17:05–17:45', type:'nivel1', note:'Desligamento' },
+    { lab:'LAB 02', time:'17:45–18:00', type:'nivel2', note:'Desligamento' },
+  ],
+  sex: [
+    { lab:'LAB 03', time:'14:40–15:25', type:'nivel1', note:'Desligamento' },
+    { lab:'LAB 02', time:'15:40–16:25', type:'nivel1', note:'Desligamento' },
+    { lab:'LAB 01', time:'16:25–17:10', type:'nivel1', note:'Desligamento · recolher chave' },
+    { lab:'LAB 04', time:'17:10–17:55', type:'nivel1', note:'Desligamento' },
+  ]
+};
+
+const ENCERRAMENTO_ITEMS = [
+  'Desligar computadores.',
+  'Desligar estabilizadores (apenas após desligar os computadores).',
+  'Desligar disjuntores (apenas após desligar os estabilizadores).',
+  'Desconectar o notebook do professor da tomada (quando aplicável).',
+  'Posicionar cada mouse junto à respectiva CPU e deixar o cabeamento organizado.',
+  'Posicionar cada teclado junto à respectiva CPU e deixar o cabeamento organizado.',
+  'Recostar as cadeiras nas bancadas, segundo a numeração de cada posição.',
+  'Colocar a banqueta junto à mesa do professor.',
+  'Alinhar as arenas que estão penduradas na parede (lab 04).',
+  'Apagar o quadro branco e a lousa.',
+  'Encaminhar objetos no suporte da lousa para a Secretaria (exceção: apagadores e marcadores de quadro branco no lab 01).',
+  'Fechar as janelas (obrigatório apenas nos labs 01 e 03).',
+  'Travar as janelas (obrigatório apenas no lab 03).',
+  'Desligar os ventiladores.',
+  'Apagar as luzes.',
+  'Trancar a porta.'
+];
+
+const CHECKLISTS = {
+  nivel1: [
+    { id:'infra', tab:'🏗️ Infraestrutura', sections: [
+      { id:'porta',        title:'1.1 PORTA',        num:'1.1', items:['Face interna e externa: integridade.','Maçaneta: integridade.','Janelinha (quando aplicável): integridade.'] },
+      { id:'janelas',      title:'1.2 JANELAS',       num:'1.2', items:['Cortinas desencaixadas.'] },
+      { id:'ventiladores', title:'1.3 VENTILADORES',  num:'1.3', items:['Funcionamento.'] },
+      { id:'lousa',        title:'1.4 LOUSA',         num:'1.4', items:['Integridade da superfície da lousa.','Integridade do suporte para apagador e caneta de quadro branco.'] },
+      { id:'iluminacao',   title:'1.5 ILUMINAÇÃO',    num:'1.5', items:['Lâmpadas "queimadas" ou intermitentes.'] }
+    ]},
+    { id:'postos', tab:'💻 Postos de Trabalho', sections: [
+      { id:'cpus',          title:'2.1 CPUs',          num:'2.1', items:['Gabinete: integridade (danos, riscos, parafusos faltando ou frouxos, conexão do cabeamento).','Suportes (pés) de borracha: integridade e encaixe.','Tampas de baia frontais: integridade e encaixe.','Identificação da numeração de bancadas: integridade.'] },
+      { id:'mouses',        title:'2.2 MOUSES',        num:'2.2', items:['Carcaça e botões: integridade.','Cabo: dano na integridade do isolamento, revelando a fiação interna.'] },
+      { id:'teclados',      title:'2.3 TECLADOS',      num:'2.3', items:['Carcaça: integridade.','Teclas soltas (virar cada teclado "de cabeça para baixo" e chacoalhá-lo levemente).','Teclas danificadas ou com encapamento danificado.','Objetos estranhos entre as teclas.','Cabo: dano na integridade do isolamento, revelando a fiação interna.'] },
+      { id:'monitores',     title:'2.4 MONITORES',     num:'2.4', items:['Integridade da carcaça e da tela (riscos visíveis com o monitor ligado e desligado).'] },
+      { id:'bancadas',      title:'2.5 BANCADAS',      num:'2.5', items:['Integridade da parte superior: riscos, danos e descascados.','Limpeza na parte superior: papéis de bala, adesivos, chicletes etc.'] },
+      { id:'cadeiras',      title:'2.6 CADEIRAS',      num:'2.6', items:['Assento, encosto e "pernas" da cadeira: integridade (rachaduras, danos etc.).','Limpeza: riscos, adesivos, chicletes ou outras coisas no assento ou no encosto.'] },
+      { id:'estabilizadores', title:'2.7 ESTABILIZADORES', num:'2.7', items:['Funcionamento: botão power e LED.','Carcaça: integridade.','Cabos de energia (do próprio estabilizador e dos equipamentos conectados): falha na integridade do isolamento, revelando a fiação interna.'] }
+    ]},
+    { id:'encerramento', tab:'🔒 Encerramento', sections: [
+      { id:'enc', title:'AÇÕES PARA ENCERRAMENTO', num:'3', items:ENCERRAMENTO_ITEMS }
+    ]}
+  ],
+
+  nivel2: [
+    { id:'postos', tab:'💻 Postos de Trabalho', sections: [
+      { id:'cpus',     title:'1.1 CPUs',     num:'1.1', items:['Gabinete: integridade (danos, riscos).','Suportes (pés) de borracha: integridade e encaixe.','Tampas de baia frontais: integridade e encaixe.'] },
+      { id:'mouses',   title:'1.2 MOUSES',   num:'1.2', items:['Carcaça e botões: integridade.'] },
+      { id:'teclados', title:'1.3 TECLADOS', num:'1.3', items:['Carcaça: integridade.','Teclas soltas (virar cada teclado "de cabeça para baixo" e chacoalhá-lo levemente).','Teclas danificadas ou com encapamento danificado.','Objetos estranhos entre as teclas.'] },
+      { id:'monitores', title:'1.4 MONITORES', num:'1.4', items:['Integridade da carcaça e da tela (riscos visíveis com o monitor ligado e desligado).'] },
+      { id:'bancadas', title:'1.5 BANCADAS',  num:'1.5', items:['Integridade da parte superior: riscos, danos e descascados.','Limpeza na parte superior: papéis de bala, adesivos, chicletes etc.'] },
+      { id:'cadeiras', title:'1.6 CADEIRAS',  num:'1.6', items:['Assento, encosto e "pernas" da cadeira: integridade (rachaduras, danos etc.).','Limpeza: riscos, adesivos, chicletes ou outras coisas no assento ou no encosto.'] }
+    ]},
+    { id:'encerramento', tab:'🔒 Encerramento', sections: [
+      { id:'enc', title:'AÇÕES PARA ENCERRAMENTO', num:'2', items:ENCERRAMENTO_ITEMS }
+    ]}
+  ],
+
+  completa: [
+    { id:'infra', tab:'🏗️ Infraestrutura', sections: [
+      { id:'porta',     title:'1.1 PORTA',     num:'1.1', items:['Face interna e externa: integridade.','Janelinha (quando aplicável): integridade.','Maçaneta: integridade e funcionamento.','Fechadura: integridade e funcionamento.','Abertura e fechamento.'] },
+      { id:'janelas',   title:'1.2 JANELAS',   num:'1.2', items:['Vidros e molduras: integridade.','Puxadores e travas: integridade e funcionamento (na abertura e no fechamento).','Cortinas: integridade e funcionamento (deslizamento).','Cortinas desencaixadas.'] },
+      { id:'ventiladores', title:'1.3 VENTILADORES', num:'1.3', items:['Acionamento e desligamento.','Controle de velocidade (quando aplicável): variação.','Botões e knobs: integridade.'] },
+      { id:'lousa',     title:'1.4 LOUSA',     num:'1.4', items:['Integridade da superfície da lousa.','Integridade do suporte para apagador e caneta de quadro branco.'] },
+      { id:'iluminacao', title:'1.5 ILUMINAÇÃO', num:'1.5', items:['Acionamento e desligamento.','Lâmpadas "queimadas" ou intermitentes.'] },
+      { id:'comvisual', title:'1.6 COM. VISUAL', num:'1.6', items:['Integridade e colagem de cartazes, avisos e horários de aula fixados nas paredes.','Integridade e colagem de avisos adesivados na porta (proibição de uso de celular, instruções para trancar a porta etc.).'] }
+    ]},
+    { id:'postos', tab:'💻 Postos de Trabalho', sections: [
+      { id:'cpus',     title:'2.1 CPUs',     num:'2.1', items:['Gabinete: integridade (danos, riscos, parafusos faltando ou frouxos etc.).','Suportes (pés) de borracha: integridade e encaixe.','Tampas de baia frontais: integridade e encaixe.','Tampas de baia traseiras: integridade e encaixe.','Orifícios de ventilação e dentro de baias: existência de objetos estranhos, especialmente obstruindo a passagem de ar.','Conectores dos periféricos: encaixados por completo.','Identificação da numeração de posição: integridade.','Etiqueta OEM: integridade.','Etiqueta de código CSG: integridade.'] },
+      { id:'mouses',   title:'2.2 MOUSES',   num:'2.2', items:['Carcaça e botões: integridade.','Cabo: dano na integridade do isolamento, revelando a fiação interna.','Botões esquerdo, direito e central (quando aplicável): funcionamento (selecionar e arrastar).','Botão de scroll: funcionamento (rolagem e seleção).','Etiqueta de código CSG (quando aplicável): integridade.','Etiqueta de fabricação (quando aplicável): integridade.'] },
+      { id:'teclados', title:'2.3 TECLADOS', num:'2.3', items:['Carcaça: integridade.','Teclas soltas (dica: virar cada teclado "de cabeça para baixo" e chacoalhá-lo levemente).','Teclas danificadas ou com encapamento danificado.','Teclas com caracteres apagados.','Teclas em posições trocadas.','Objetos estranhos entre as teclas.','Cabo: dano na integridade do isolamento, revelando a fiação interna.','Etiqueta de código CSG (quando aplicável): integridade.','Etiqueta de fabricação (quando aplicável): integridade.'] },
+      { id:'monitores', title:'2.4 MONITORES', num:'2.4', items:['Integridade da carcaça e da tela (riscos, aqueles visíveis com o monitor ligado e os notados com o mesmo desligado).','Cabo: dano na integridade do isolamento, revelando a fiação interna.','Etiqueta de código CSG (quando aplicável): integridade.','Etiqueta de fabricação (quando aplicável): integridade.'] },
+      { id:'estabilizadores', title:'2.5 ESTABILIZADORES', num:'2.5', items:['Funcionamento: botão power e LED.','Carcaça: integridade.','Orifícios de ventilação e dentro de baias: existência de objetos estranhos.','Cabos de energia (do próprio estabilizador e dos equipamentos a ele conectados, em ambas as extremidades): falha na integridade do isolamento, revelando a fiação interna.','Cabos de energia (do próprio estabilizador e dos equipamentos a ele conectados, em ambas as extremidades): encaixados por completo.'] },
+      { id:'bancadas', title:'2.6 BANCADAS',  num:'2.6', items:['Integridade da parte superior: riscos, danos e descascados.','Integridade da parte inferior, laterais e sustentação ("pernas"): riscos, danos e descascados.','Integridade da identificação das bancadas (lab 04).','Limpeza na parte superior, inferior, laterais e sustentação ("pernas"): papéis de bala, adesivos, chicletes, rabiscos etc.'] },
+      { id:'cadeiras', title:'2.7 CADEIRAS',  num:'2.7', items:['Assento, encosto e "pernas" da cadeira: integridade (rachaduras, danos etc.).','Limpeza: riscos, figurinhas, chicletes ou outras coisas no assento, no encosto ou embaixo da cadeira.'] },
+      { id:'arenas',   title:'2.8 ARENAS',    num:'2.8', items:['Integridade da estrutura (danos, fixação das quinas etc).','Integridade da identificação.'] },
+      { id:'professor', title:'2.9 EQUIP. PROFESSOR', num:'2.9', items:['Integridade do computador (conforme o caso: notebook, CPU, monitor, mouse, teclado, estabilizador e cabeamento).','Integridade da mesa.','Integridade da mesa de apoio (mesa branca com rodinhas).','Integridade da cadeira.','Integridade da banqueta de madeira.'] }
+    ]},
+    { id:'encerramento', tab:'🔒 Encerramento', sections: [
+      { id:'apagar',     title:'3.1 APAGAR ARQUIVOS',  num:'3.1', items:['Da área de trabalho.','Da pasta "Documentos".','Da pasta "Imagens".','Da pasta "Downloads".','Da Lixeira.'] },
+      { id:'papelparede', title:'3.2 PAPÉIS DE PAREDE', num:'3.2', items:['Da área de trabalho.','Do navegador.'] },
+      { id:'finais',     title:'3.3 MOVIMENTOS FINAIS', num:'3.3', items:['Desligar computadores.','Desligar estabilizadores (apenas após desligar os computadores).','Desligar disjuntores (apenas após desligar os estabilizadores).','Desconectar o notebook do professor da tomada (quando aplicável).','Passar pano na base para remover o pó do monitor, de sua base, da CPU, dos periféricos (mouse e teclado), dos estabilizadores e da superfície da bancada.','Se preciso, utilizar álcool ou pano embebido em água e sabão neutro para a remoção de sujidades em bancadas e equipamentos (incluindo os estabilizadores).','Alinhar os computadores entre si.','Ajustar o ângulo da tela dos monitores a 90°.','Posicionar cada mouse e teclado junto às respectivas CPUs e deixar os cabeamentos organizados.','Recostar as cadeiras nas bancadas, segundo a numeração de cada posição.','Colocar a banqueta junto à mesa do professor.','Alinhar as arenas que estão penduradas na parede (lab 04).','Apagar o quadro branco e a lousa (se a lousa estiver manchada, limpá-la com pano embebido em álcool).','Recolher papéis e outros objetos sobre a mesa do professor ou embaixo dela, encaminhando-os para a Secretaria.','Encaminhar objetos no suporte da lousa para a Secretaria (exceção: apagadores e marcadores de quadro branco no lab 01).','Fechar as janelas (obrigatório apenas nos labs 01 e 03).','Travar as janelas (obrigatório apenas no lab 03).','Desligar os ventiladores.','Apagar as luzes.','Trancar a porta.'] }
+    ]}
+  ]
+};
+
+// ═══════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════
+let currentSession = null;
+let currentData = [];
+let activeTab = 0;
+let state = {};
+
+const TYPE_LABELS = { nivel1:'Revisão Parcial Nível I', nivel2:'Revisão Parcial Nível II', completa:'Revisão Completa' };
+const TYPE_TAGS   = { nivel1:['tag-nivel1','Nível I'], nivel2:['tag-nivel2','Nível II'], completa:['tag-completa','Completa'] };
+const TYPE_BADGE  = { nivel1:['badge-nivel1','Nível I'], nivel2:['badge-nivel2','Nível II'], completa:['badge-completa','Completa'], null:['badge-none','Desligamento'] };
+const TYPE_ACCENT = { nivel1:'accent-nivel1', nivel2:'accent-nivel2', completa:'accent-completa' };
+
+function getTodayKey() {
+  const map = { 1:'seg', 2:'ter', 3:'qua', 4:'qui', 5:'sex' };
+  return map[new Date().getDay()] || null;
+}
+let activeDayKey = getTodayKey() || 'seg';
+
+// ═══════════════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════════════
+function showToast(msg, type='info', duration=2400) {
+  const c = document.getElementById('toastContainer');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.textContent = msg;
+  c.appendChild(t);
+  setTimeout(() => {
+    t.classList.add('out');
+    setTimeout(() => t.remove(), 320);
+  }, duration);
+}
+
+// ═══════════════════════════════════════════════
+// NOTIFICATIONS
+// ═══════════════════════════════════════════════
+function requestNotificationPermission() {
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+}
+
+function sendNotification(title, body) {
+  if ('Notification' in window && Notification.permission === 'granted') {
+    new Notification(title, { body, icon: '' });
+  }
+}
+
+// ═══════════════════════════════════════════════
+// HOME
+// ═══════════════════════════════════════════════
+function initHome() {
+  const now = new Date();
+  const opts = { weekday:'short', day:'2-digit', month:'2-digit' };
+  document.getElementById('homeDate').textContent = now.toLocaleDateString('pt-BR', opts).replace(',','');
+  renderDayTabs();
+  renderSchedule();
+  requestNotificationPermission();
+}
+
+function renderDayTabs() {
+  const todayKey = getTodayKey();
+  document.getElementById('dayTabs').innerHTML = DAYS.map(d => `
+    <button class="day-tab${d.key===activeDayKey?' active':''}${d.key===todayKey?' today':''}"
+      onclick="switchDay('${d.key}')">
+      ${d.label}${d.key===todayKey?' ·':''}
+    </button>`).join('');
+}
+
+function switchDay(key) { activeDayKey=key; renderDayTabs(); renderSchedule(); }
+
+function getSessionState(dayKey, cardIdx) {
+  return _loadStateWithExpiry(`session_${dayKey}_${cardIdx}`);
+}
+
+function isCardDone(dayKey, cardIdx) {
+  const card = SCHEDULE[dayKey][cardIdx];
+  if (!card.type) return false;
+  const saved = getSessionState(dayKey, cardIdx);
+  const data = CHECKLISTS[card.type];
+  let total=0, done=0;
+  data.forEach((tab,ti) => tab.sections.forEach((sec,si) => sec.items.forEach((_,ii) => { total++; if(saved[`${ti}-${si}-${ii}`]) done++; })));
+  return total>0 && done===total;
+}
+
+function renderSchedule() {
+  const todayKey = getTodayKey();
+  const cards = SCHEDULE[activeDayKey];
+  const isToday = activeDayKey === todayKey;
+  const dayObj = DAYS.find(d => d.key===activeDayKey);
+
+  let html = `<div class="schedule-day-label">${dayObj.fullLabel}${isToday?'<span class="today-badge">HOJE</span>':''}</div>`;
+
+  cards.forEach((card, idx) => {
+    const [bdgClass, bdgLabel] = TYPE_BADGE[card.type] || TYPE_BADGE[null];
+    const accentClass = card.type ? TYPE_ACCENT[card.type] : 'accent-none';
+    const hasChecklist = card.type !== null;
+    const done = hasChecklist && isCardDone(activeDayKey, idx);
+
+    let progressHTML = '';
+    if (hasChecklist) {
+      const saved = getSessionState(activeDayKey, idx);
+      const data = CHECKLISTS[card.type];
+      let total=0, doneCount=0;
+      data.forEach((tab,ti) => tab.sections.forEach((sec,si) => sec.items.forEach((_,ii) => { total++; if(saved[`${ti}-${si}-${ii}`]) doneCount++; })));
+      const pct = total ? Math.round((doneCount/total)*100) : 0;
+      progressHTML = `<div class="lab-progress">
+        <div class="lab-progress-bar"><div class="lab-progress-fill" style="width:${pct}%"></div></div>
+        <span class="lab-progress-text">${doneCount}/${total}</span>
+      </div>`;
+    }
+
+    const doneLabel = done ? `<span class="lab-type-badge badge-done">✓ Concluído</span>` : `<span class="lab-type-badge ${bdgClass}">${bdgLabel}</span>`;
+
+    html += `<div class="lab-card${hasChecklist?'':' no-checklist'}${done?' done-card':''}"
+           onclick="${hasChecklist?`openChecklist('${activeDayKey}',${idx})`:''}">
+      <div class="lab-card-accent ${done?'accent-completa':accentClass}"></div>
+      <div class="lab-card-inner">
+        <div class="lab-card-row">
+          <span class="lab-name">${card.lab}</span>
+          ${doneLabel}
+        </div>
+        <div class="lab-time">${card.time}</div>
+        ${card.note?`<div class="lab-note">${card.note}</div>`:''}
+        ${progressHTML}
+      </div>
+      ${hasChecklist?'<span class="lab-arrow">›</span>':''}
+    </div>`;
+  });
+
+  document.getElementById('scheduleContent').innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════
+// CHECKLIST
+// ═══════════════════════════════════════════════
+function openChecklist(dayKey, cardIdx) {
+  const card = SCHEDULE[dayKey][cardIdx];
+  currentSession = { dayKey, cardIdx, type:card.type, lab:card.lab };
+  currentData = CHECKLISTS[card.type];
+
+  const sKey = `session_${dayKey}_${cardIdx}`;
+  state = _loadStateWithExpiry(sKey);
+
+  currentData.forEach((tab,ti) => tab.sections.forEach((sec,si) => sec.items.forEach((_,ii) => {
+    const id=`${ti}-${si}-${ii}`; if(!(id in state)) state[id]=false;
+  })));
+
+  activeTab = 0;
+  document.getElementById('clLabName').textContent = `${card.lab} · ${DAYS.find(d=>d.key===dayKey).label}`;
+  const [tagClass] = TYPE_TAGS[card.type];
+  const tagEl = document.getElementById('clTypeTag');
+  tagEl.className = `checklist-type-tag ${tagClass}`;
+  tagEl.textContent = TYPE_LABELS[card.type];
+
+  renderStepIndicator();
+  renderTabs();
+  renderContent();
+  updateProgress();
+  updateTabBadges();
+  showScreen('screen-checklist');
+  // Show defeito FAB
+  document.getElementById('defeitoFab').style.display = 'flex';
+  document.getElementById('defeitoSheetTitle').textContent = `⚠ Defeitos · ${card.lab}`;
+  updateDefeitoFabBadge();
+  // Populate PC select
+  _populateDefeitoPcSelect(card.lab);
+}
+
+function goHome() {
+  document.getElementById('defeitoFab').style.display = 'none';
+  showScreen('screen-home');
+  renderSchedule();
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+// ── 24H AUTO-RESET LOGIC ──
+// State is saved as { items: {...}, timestamps: { id: epochMs } }
+function saveState() {
+  if (!currentSession) return;
+  const key = `session_${currentSession.dayKey}_${currentSession.cardIdx}`;
+  try {
+    const existing = _loadRaw(key);
+    const timestamps = existing.timestamps || {};
+    // record timestamp for newly-checked items; clear timestamp when unchecked
+    Object.keys(state).forEach(id => {
+      if (state[id] && !timestamps[id]) timestamps[id] = Date.now();
+      if (!state[id]) delete timestamps[id];
+    });
+    localStorage.setItem(key, JSON.stringify({ items: state, timestamps }));
+  } catch(e) {}
+}
+
+function _loadRaw(key) {
+  try { const s = localStorage.getItem(key); return s ? JSON.parse(s) : {}; } catch(e) { return {}; }
+}
+
+function _loadStateWithExpiry(key) {
+  const raw = _loadRaw(key);
+  // Support legacy format (plain object without .items wrapper)
+  const items = raw.items || raw;
+  const timestamps = raw.timestamps || {};
+  const now = Date.now();
+  const MS_24H = 24 * 60 * 60 * 1000;
+  const result = {};
+  Object.keys(items).forEach(id => {
+    const ts = timestamps[id];
+    if (items[id] && ts && (now - ts) >= MS_24H) {
+      result[id] = false; // expired → reset to pending
+    } else {
+      result[id] = items[id];
+    }
+  });
+  return result;
+}
+
+function totalItems() { return Object.keys(state).length; }
+function doneItems()  { return Object.values(state).filter(Boolean).length; }
+
+// ── Step indicator (dots) ──
+function renderStepIndicator() {
+  const tabs = currentData;
+  let html = '';
+  tabs.forEach((tab, i) => {
+    const isDone = isTabDone(i);
+    const isActive = i === activeTab;
+    html += `<div class="step-dot${isActive?' active':''}${isDone&&!isActive?' completed':''}"></div>`;
+  });
+  html += `<span class="step-label">${activeTab+1} de ${tabs.length}</span>`;
+  document.getElementById('stepIndicator').innerHTML = html;
+}
+
+function isTabDone(ti) {
+  return currentData[ti].sections.every((sec,si) =>
+    sec.items.every((_,ii) => state[`${ti}-${si}-${ii}`])
+  );
+}
+
+function updateProgress() {
+  const total=totalItems(), done=doneItems();
+  const pct = total ? Math.round((done/total)*100) : 0;
+  document.getElementById('progressBar').style.width = pct+'%';
+  document.getElementById('progressText').textContent = `${done} / ${total} itens`;
+  document.getElementById('progressPct').textContent = pct+'%';
+  document.getElementById('statDone').textContent = done;
+  document.getElementById('statPending').textContent = total-done;
+  document.getElementById('completeBtn').disabled = false;
+}
+
+function updateSectionProgress(itemEl) {
+  const body = itemEl.closest('.section-body');
+  const header = body?.previousElementSibling;
+  if (!header) return;
+  const items = body.querySelectorAll('.item');
+  const total = items.length;
+  const done = body.querySelectorAll('.item.checked').length;
+  const progEl = header.querySelector('.section-progress');
+  if (progEl) { progEl.textContent=`${done}/${total}`; progEl.className='section-progress'+(done===total?' done':''); }
+  const numEl = header.querySelector('.section-num');
+  if (numEl) { numEl.className='section-num'+(done===total?' done':''); }
+  if (done===total) header.classList.add('sec-done'); else header.classList.remove('sec-done');
+}
+
+function updateTabBadges() {
+  currentData.forEach((tab,ti) => {
+    let total=0, done=0;
+    tab.sections.forEach((sec,si) => sec.items.forEach((_,ii) => { total++; if(state[`${ti}-${si}-${ii}`]) done++; }));
+    const tabEl = document.querySelector(`.tab[data-tab="${ti}"]`);
+    if (!tabEl) return;
+    const badge = tabEl.querySelector('.badge');
+    if (badge) badge.textContent = `${done}/${total}`;
+    if (done===total) tabEl.classList.add('tab-done'); else tabEl.classList.remove('tab-done');
+    const chk = tabEl.querySelector('.tab-check');
+    if (chk) chk.textContent = done===total ? '✓ ' : '';
+  });
+  renderStepIndicator();
+}
+
+function renderTabs() {
+  const container = document.getElementById('tabsContainer');
+  container.innerHTML = currentData.map((tab,i) => {
+    let total=0; tab.sections.forEach(s=>{ total+=s.items.length; });
+    const done = isTabDone(i);
+    return `<button class="tab${i===activeTab?' active':''}${done?' tab-done':''}" data-tab="${i}" onclick="switchTab(${i})">
+      <span class="tab-check">${done?'✓ ':''}</span>${tab.tab}
+      <span class="badge">0/${total}</span>
+    </button>`;
+  }).join('');
+  updateTabBadges();
+}
+
+function switchTab(idx) {
+  activeTab = idx;
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', i===idx));
+  renderContent();
+  renderStepIndicator();
+}
+
+// ── Check if we should auto-advance ──
+function checkTabAutoAdvance() {
+  if (!isTabDone(activeTab)) return;
+  const nextIdx = activeTab + 1;
+  if (nextIdx >= currentData.length) return; // all done, let modal handle
+
+  showToast(`✓ ${currentData[activeTab].tab} concluída!`, 'success', 2000);
+  sendNotification('Lab Check ✓', `${currentData[activeTab].tab} finalizada! Próxima: ${currentData[nextIdx].tab}`);
+
+  setTimeout(() => {
+    switchTab(nextIdx);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    // Show banner at top of content
+    renderContent(true);
+  }, 800);
+}
+
+function renderContent(showBanner=false) {
+  const container = document.getElementById('content');
+  const tab = currentData[activeTab];
+
+  // Tab completion banner
+  let bannerHTML = '';
+  if (showBanner) {
+    const nextIdx = activeTab; // after advance, activeTab is already next
+    bannerHTML = `<div class="tab-complete-banner visible">
+      <h3>✓ Seção anterior concluída!</h3>
+      <p>Agora: <strong>${currentData[activeTab].tab}</strong></p>
+    </div>`;
+  }
+
+  const sectionsHTML = tab.sections.map((sec,si) => {
+    const total = sec.items.length;
+    let done=0;
+    sec.items.forEach((_,ii) => { if(state[`${activeTab}-${si}-${ii}`]) done++; });
+    const allDone = done===total;
+    const allChecked = allDone;
+
+    const itemsHTML = sec.items.map((text,ii) => {
+      const id=`${activeTab}-${si}-${ii}`;
+      const checked = state[id];
+      const letter = String.fromCharCode(97+ii);
+      return `<div class="item${checked?' checked':''}" id="el-${id}" onclick="handleItemClick('${id}',this)">
+        <div class="checkbox"><span class="checkmark">✓</span></div>
+        <span class="item-letter">${letter})</span>
+        <span class="item-text">${text}</span>
+      </div>`;
+    }).join('');
+
+    return `<div class="section">
+      <div class="section-header${allDone?' sec-done':''}" onclick="toggleSection('body-${si}',this)">
+        <span class="section-num${allDone?' done':''}">${sec.num}</span>
+        <span class="section-title">${sec.title.replace(/^\d+\.\d+\s+/,'')}</span>
+        <button class="mark-all-btn${allChecked?' all-done':''}" onclick="event.stopPropagation();markAll(${si},${!allChecked})" title="${allChecked?'Desmarcar todos':'Marcar todos'}">
+          ${allChecked?'✓ todos':'marcar ↓'}
+        </button>
+        <span class="section-progress${allDone?' done':''}">${done}/${total}</span>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="section-body" id="body-${si}">${itemsHTML}</div>
+    </div>`;
+  }).join('');
+
+  container.innerHTML = bannerHTML + sectionsHTML;
+}
+
+function markAll(si, check) {
+  const sec = currentData[activeTab].sections[si];
+  sec.items.forEach((_,ii) => { state[`${activeTab}-${si}-${ii}`] = check; });
+  saveState();
+  renderContent();
+  updateProgress();
+  updateTabBadges();
+  if (check) {
+    showToast(`Seção marcada ✓`, 'success', 1600);
+    setTimeout(checkTabAutoAdvance, 200);
+  }
+}
+
+function handleItemClick(id, el) {
+  const ripple = document.createElement('span');
+  ripple.className = 'ripple';
+  const rect = el.getBoundingClientRect();
+  const size = Math.max(rect.width, rect.height);
+  ripple.style.cssText = `width:${size}px;height:${size}px;top:${rect.height/2-size/2}px;left:${rect.width/2-size/2}px`;
+  el.appendChild(ripple);
+  setTimeout(()=>ripple.remove(), 500);
+
+  state[id] = !state[id];
+  saveState();
+  if (state[id]) el.classList.add('checked'); else el.classList.remove('checked');
+  updateProgress();
+  updateSectionProgress(el);
+  updateTabBadges();
+
+  // re-render the mark-all btn for this section
+  const si = parseInt(id.split('-')[1]);
+  const sec = currentData[activeTab].sections[si];
+  const total = sec.items.length;
+  const done = sec.items.filter((_,ii) => state[`${activeTab}-${si}-${ii}`]).length;
+  const header = document.getElementById(`body-${si}`)?.previousElementSibling;
+  if (header) {
+    const btn = header.querySelector('.mark-all-btn');
+    if (btn) {
+      const allDone = done===total;
+      btn.className = `mark-all-btn${allDone?' all-done':''}`;
+      btn.textContent = allDone ? '✓ todos' : 'marcar ↓';
+    }
+  }
+
+  if (state[id]) checkTabAutoAdvance();
+}
+
+function toggleSection(bodyId, header) {
+  document.getElementById(bodyId).classList.toggle('hidden');
+  header.classList.toggle('collapsed');
+}
+
+function resetChecklist() {
+  if (!confirm('Limpar todos os itens marcados nessa sessão?')) return;
+  Object.keys(state).forEach(k=>state[k]=false);
+  saveState();
+  activeTab=0;
+  renderTabs();
+  renderContent();
+  updateProgress();
+  updateTabBadges();
+}
+
+// ── MODAL ──
+function buildReport() {
+  const total=totalItems(), done=doneItems();
+  const pending=[];
+  currentData.forEach((tab,ti) => tab.sections.forEach((sec,si) => sec.items.forEach((text,ii) => {
+    if (!state[`${ti}-${si}-${ii}`]) pending.push({ label:sec.num, text });
+  })));
+  return { total, done, pending };
+}
+
+function openModal() {
+  const { total, done, pending } = buildReport();
+  const allDone = pending.length===0;
+
+  document.getElementById('modalEmoji').textContent = allDone ? '🎉' : '⚠️';
+  document.getElementById('modalTitle').textContent = allDone ? 'Checklist completo!' : `${pending.length} item${pending.length>1?'s':''} pendente${pending.length>1?'s':''}`;
+  document.getElementById('modalDesc').textContent  = allDone
+    ? `Todos os ${total} itens verificados. O laboratório está em ordem.`
+    : `${done} de ${total} itens marcados. Itens faltando:`;
+
+  document.getElementById('pendingListContainer').innerHTML = !allDone ? `
+    <div class="pending-list">
+      <p>Pendentes</p>
+      ${pending.map(p=>`<div class="pending-item"><span class="section-tag">${p.label}</span>${p.text}</div>`).join('')}
+    </div>` : '';
+
+  document.getElementById('modalSecBtn').textContent = allDone ? 'Reiniciar checklist' : 'Reiniciar tudo';
+  document.getElementById('modalOverlay').classList.add('open');
+
+  if (allDone) {
+    sendNotification('🎉 Lab Check completo!', `${currentSession.lab} — todos os ${total} itens verificados.`);
+  }
+}
+
+function closeModal() { document.getElementById('modalOverlay').classList.remove('open'); }
+function closeModalOutside(e) { if(e.target===document.getElementById('modalOverlay')) closeModal(); }
+
+// ── WhatsApp share ──
+function shareWhatsApp() {
+  const { total, done, pending } = buildReport();
+  const { lab, dayKey } = currentSession;
+  const day = DAYS.find(d=>d.key===dayKey).fullLabel;
+  const now = new Date();
+  const hora = now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  const tipo = TYPE_LABELS[currentSession.type];
+
+  let msg = `✅ *Lab Check — ${lab}*\n`;
+  msg += `📅 ${day} · ${hora}\n`;
+  msg += `📋 ${tipo}\n\n`;
+  msg += `*Progresso: ${done}/${total} itens (${Math.round(done/total*100)}%)*\n`;
+
+  if (pending.length === 0) {
+    msg += '\n🎉 Checklist 100% completo! Laboratório em ordem.';
+  } else {
+    msg += `\n⚠️ *${pending.length} pendente${pending.length>1?'s':''}:*\n`;
+    pending.slice(0,10).forEach(p => { msg += `• [${p.label}] ${p.text}\n`; });
+    if (pending.length>10) msg += `• ...e mais ${pending.length-10} item${pending.length-10>1?'s':''}.`;
+  }
+
+  const url = `https://wa.me/?text=${encodeURIComponent(msg)}`;
+  window.open(url, '_blank');
+}
+
+// ═══════════════════════════════════════════════
+// DEFEITOS — Modular & localStorage-persisted
+// (swap salvarDefeito/carregarDefeitos internals
+//  for fetch() calls when backend estiver pronto)
+// ═══════════════════════════════════════════════
+
+/** Retorna a chave de armazenamento para o lab atual */
+function _defeitoStorageKey() {
+  if (!currentSession) return 'defeitos_unknown';
+  return `defeitos_${currentSession.dayKey}_${currentSession.cardIdx}_${currentSession.lab.replace(/\s/g,'')}`;
+}
+
+/**
+ * carregarDefeitos()
+ * → Futura integração: substituir localStorage.getItem por fetch GET /api/defeitos?lab=...
+ */
+function carregarDefeitos() {
+  try {
+    const raw = localStorage.getItem(_defeitoStorageKey());
+    return raw ? JSON.parse(raw) : [];
+  } catch(e) { return []; }
+}
+
+/**
+ * salvarDefeito(defeito)
+ * → Futura integração: substituir localStorage.setItem por fetch POST /api/defeitos
+ * @param {{ id, pc, descricao, fotoBase64, status, criadoEm }} defeito
+ */
+function salvarDefeito() {
+  const pc = document.getElementById('defeitoPcSelect').value;
+  const desc = document.getElementById('defeitoDescInput').value.trim();
+  const preview = document.getElementById('defeitoFilePreview');
+  const fotoBase64 = (preview.style.display !== 'none') ? preview.src : null;
+
+  if (!desc) { showToast('Descreva o defeito antes de registrar.', 'info'); return; }
+
+  const defeito = {
+    id: Date.now(),
+    lab: currentSession.lab,
+    dayKey: currentSession.dayKey,
+    pc: pc || 'Não especificado',
+    descricao: desc,
+    fotoBase64,
+    status: 'pendente',      // 'pendente' | 'consertado'
+    criadoEm: new Date().toISOString()
+  };
+
+  const lista = carregarDefeitos();
+  lista.unshift(defeito); // mais novo no topo
+  try { localStorage.setItem(_defeitoStorageKey(), JSON.stringify(lista)); } catch(e) {}
+
+  // Reset form
+  document.getElementById('defeitoDescInput').value = '';
+  document.getElementById('defeitoPcSelect').value = '';
+  document.getElementById('defeitoFileInput').value = '';
+  document.getElementById('defeitoFilePreview').style.display = 'none';
+  document.getElementById('defeitoFileLabel').textContent = '📷 Toque para tirar foto ou selecionar';
+
+  showToast('Defeito registrado ✓', 'success');
+  renderDefeitos();
+  updateDefeitoFabBadge();
+}
+
+/**
+ * renderDefeitos()
+ * Atualiza o DOM da lista de defeitos no modal.
+ */
+function renderDefeitos() {
+  const lista = carregarDefeitos();
+  const container = document.getElementById('defeitoListContainer');
+  document.getElementById('defeitoListCount').textContent = lista.length;
+
+  if (lista.length === 0) {
+    container.innerHTML = '<div class="defeito-empty">Nenhum defeito registrado ainda.</div>';
+    return;
+  }
+
+  container.innerHTML = lista.map(d => {
+    const data = new Date(d.criadoEm).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+    const imgHTML = d.fotoBase64
+      ? `<img class="defeito-card-img" src="${d.fotoBase64}" alt="foto do defeito">`
+      : '';
+    const statusClass = d.status === 'consertado' ? 'consertado' : 'pendente';
+    const statusLabel = d.status === 'consertado' ? '✓ Consertado' : '⏳ Pendente';
+    return `<div class="defeito-card" id="defeito-${d.id}">
+      <div class="defeito-card-head">
+        <div class="defeito-card-meta">
+          <span class="defeito-card-pc">📍 ${d.pc}</span>
+          <span class="defeito-card-date">${data}</span>
+        </div>
+        <span class="defeito-status-badge ${statusClass}"
+              onclick="toggleDefeitoStatus(${d.id})"
+              title="Clique para alternar status">${statusLabel}</span>
+      </div>
+      ${imgHTML}
+      <div class="defeito-card-desc">${d.descricao}</div>
+      <button class="defeito-delete-btn" onclick="deletarDefeito(${d.id})" title="Remover defeito">✕</button>
+    </div>`;
+  }).join('');
+}
+
+/**
+ * toggleDefeitoStatus(id)
+ * Alterna entre 'pendente' e 'consertado'.
+ * → Futura integração: fetch PATCH /api/defeitos/:id { status }
+ */
+function toggleDefeitoStatus(id) {
+  const lista = carregarDefeitos();
+  const idx = lista.findIndex(d => d.id === id);
+  if (idx === -1) return;
+  lista[idx].status = lista[idx].status === 'consertado' ? 'pendente' : 'consertado';
+  try { localStorage.setItem(_defeitoStorageKey(), JSON.stringify(lista)); } catch(e) {}
+  renderDefeitos();
+  updateDefeitoFabBadge();
+}
+
+/**
+ * deletarDefeito(id)
+ * → Futura integração: fetch DELETE /api/defeitos/:id
+ */
+function deletarDefeito(id) {
+  if (!confirm('Remover este defeito?')) return;
+  const lista = carregarDefeitos().filter(d => d.id !== id);
+  try { localStorage.setItem(_defeitoStorageKey(), JSON.stringify(lista)); } catch(e) {}
+  renderDefeitos();
+  updateDefeitoFabBadge();
+  showToast('Defeito removido.', 'info', 1800);
+}
+
+function updateDefeitoFabBadge() {
+  const lista = carregarDefeitos();
+  const pendentes = lista.filter(d => d.status === 'pendente').length;
+  const badge = document.getElementById('defeitoFabBadge');
+  badge.style.display = pendentes > 0 ? 'flex' : 'none';
+  badge.textContent = pendentes;
+}
+
+function openDefeitoModal() {
+  renderDefeitos();
+  document.getElementById('defeitoOverlay').classList.add('open');
+}
+
+function closeDefeitoModal() {
+  document.getElementById('defeitoOverlay').classList.remove('open');
+}
+
+function closeDefeitoOutside(e) {
+  if (e.target === document.getElementById('defeitoOverlay')) closeDefeitoModal();
+}
+
+function handleDefeitoPhoto(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const preview = document.getElementById('defeitoFilePreview');
+    preview.src = ev.target.result;
+    preview.style.display = 'block';
+    document.getElementById('defeitoFileLabel').textContent = '✓ Foto selecionada';
+  };
+  reader.readAsDataURL(file);
+}
+
+function _populateDefeitoPcSelect(labName) {
+  const sel = document.getElementById('defeitoPcSelect');
+  // Base: 20 PCs + posições especiais
+  const options = ['— Selecione o PC ou local —'];
+  for (let i = 1; i <= 20; i++) options.push(`PC ${String(i).padStart(2,'0')}`);
+  options.push('Mesa do professor', 'Quadro branco / Lousa', 'Janela / Ventilador', 'Porta', 'Outro');
+  sel.innerHTML = options.map((o,i) => `<option value="${i===0?'':o}">${o}</option>`).join('');
+}
+
+// ── Init ──
+initHome();
+
+
+// goHome e openChecklist já estão definidos no JS original acima.
+// A integração com navTo é feita via navTo() no bottom nav.
+
+// ══════════════════════════════════════════════
+// AUTH — OAuth 2.0 Implicit Flow
+// ══════════════════════════════════════════════
+const TK_KEY  = 'cse_token';
+const EXP_KEY = 'cse_expiry';
+
+function driveLogin() {
+  const p = new URLSearchParams({
+    client_id:     CFG.CLIENT_ID,
+    redirect_uri:  CFG.REDIRECT_URI,
+    response_type: 'token',
+    scope:         CFG.SCOPES,
+    prompt:        'select_account',
+  });
+  window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${p}`;
+}
+
+function processarTokenCallback() {
+  const hash = window.location.hash.substring(1);
+  const p    = new URLSearchParams(hash);
+  const token = p.get('access_token');
+  const expIn = parseInt(p.get('expires_in') || '3600', 10);
+  if (!token) return false;
+  localStorage.setItem(TK_KEY,  token);
+  localStorage.setItem(EXP_KEY, String(Date.now() + expIn * 1000));
+  history.replaceState(null, '', window.location.pathname);
+  return true;
+}
+
+function getToken() {
+  const t = localStorage.getItem(TK_KEY);
+  const e = parseInt(localStorage.getItem(EXP_KEY) || '0', 10);
+  return (t && Date.now() < e) ? t : null;
+}
+
+function driveAutenticado() { return !!getToken(); }
+
+function driveLogout() {
+  localStorage.removeItem(TK_KEY);
+  localStorage.removeItem(EXP_KEY);
+  showToast('Drive desconectado.', 'info');
+  initFotos();
+}
+
+function minutosRestantes() {
+  const e = parseInt(localStorage.getItem(EXP_KEY) || '0', 10);
+  return Math.max(0, Math.round((e - Date.now()) / 60000));
+}
+
+// ══════════════════════════════════════════════
+// DRIVE API v3
+// ══════════════════════════════════════════════
+const DRIVE_BASE = 'https://www.googleapis.com/drive/v3';
+const DRIVE_UP   = 'https://www.googleapis.com/upload/drive/v3';
+
+function authH() { return { Authorization: `Bearer ${getToken()}` }; }
+
+async function buscarFotoPosto(lab, posto, tipo) {
+  const pastaId = CFG.PASTAS[lab];
+  const nome = `posto_${String(posto).padStart(2,'0')}_${tipo}`;
+  const q = `'${pastaId}' in parents and name contains '${nome}' and trashed=false`;
+  const p = new URLSearchParams({ q, fields:'files(id,name,modifiedTime,thumbnailLink)', orderBy:'modifiedTime desc', pageSize:'5' });
+  const r = await fetch(`${DRIVE_BASE}/files?${p}`, { headers: authH() });
+  if (!r.ok) return null;
+  const d = await r.json();
+  return d.files?.[0] || null;
+}
+
+async function deletarArquivoDrive(fileId) {
+  await fetch(`${DRIVE_BASE}/files/${fileId}`, { method:'DELETE', headers: authH() });
+}
+
+async function uploadParaDrive(pastaId, nomeArquivo, blob) {
+  const token    = getToken();
+  const boundary = 'cse_' + Date.now();
+  const meta     = JSON.stringify({ name: nomeArquivo, parents: [pastaId] });
+  const fData    = await blob.arrayBuffer();
+  const pre      = `--${boundary}\r\nContent-Type: application/json\r\n\r\n${meta}\r\n--${boundary}\r\nContent-Type: ${blob.type || 'image/jpeg'}\r\n\r\n`;
+  const post     = `\r\n--${boundary}--`;
+  const preB     = new TextEncoder().encode(pre);
+  const postB    = new TextEncoder().encode(post);
+  const body     = new Uint8Array(preB.byteLength + fData.byteLength + postB.byteLength);
+  body.set(preB);
+  body.set(new Uint8Array(fData), preB.byteLength);
+  body.set(postB, preB.byteLength + fData.byteLength);
+  const r = await fetch(`${DRIVE_UP}/files?uploadType=multipart&fields=id,name,modifiedTime`, {
+    method: 'POST',
+    headers: { Authorization:`Bearer ${token}`, 'Content-Type':`multipart/related; boundary=${boundary}` },
+    body,
+  });
+  if (!r.ok) throw new Error(`Upload ${r.status}`);
+  return r.json();
+}
+
+async function substituirFotoPosto(lab, posto, tipo, blob) {
+  const pastaId     = CFG.PASTAS[lab];
+  const nomeArquivo = `posto_${String(posto).padStart(2,'0')}_${tipo}.jpg`;
+  const existente   = await buscarFotoPosto(lab, posto, tipo);
+  if (existente) await deletarArquivoDrive(existente.id);
+  return uploadParaDrive(pastaId, nomeArquivo, blob);
+}
+
+// ══════════════════════════════════════════════
+// FOTOS — UI
+// ══════════════════════════════════════════════
+const LABS_LIST = ['LAB 01','LAB 02','LAB 03','LAB 04'];
+let activeFotoLab = 'LAB 01';
+let fotoModal = { lab:'', posto:0, tipo:'frente', pendingBlob:null, driveFile:null };
+
+function initFotos() {
+  // Processa token se vier na URL (callback OAuth)
+  if (window.location.hash.includes('access_token')) processarTokenCallback();
+
+  renderFotosLabTabs();
+
+  const tokenInfo = document.getElementById('driveTokenInfo');
+  if (driveAutenticado()) {
+    tokenInfo.style.display = 'flex';
+    document.getElementById('driveMinLeft').textContent = minutosRestantes();
+    renderGaleriaDrive(activeFotoLab);
+  } else {
+    tokenInfo.style.display = 'none';
+    renderConectarDrive();
+  }
+  updateFotosBadge();
+}
+
+function renderFotosLabTabs() {
+  document.getElementById('fotosLabTabs').innerHTML = LABS_LIST.map(l =>
+    `<button class="fotos-lab-tab${l===activeFotoLab?' active':''}" onclick="switchFotoLab('${l}')">${l}</button>`
+  ).join('');
+}
+
+function switchFotoLab(lab) { activeFotoLab = lab; renderFotosLabTabs(); driveAutenticado() ? renderGaleriaDrive(lab) : renderConectarDrive(); }
+
+function renderConectarDrive() {
+  document.getElementById('fotosContent').innerHTML = `
+    <div class="drive-connect-wrap">
+      <span class="drive-connect-icon">📂</span>
+      <div class="drive-connect-title">Conectar ao Google Drive</div>
+      <div class="drive-connect-sub">As fotos de referência ficam salvas na conta operacional.<br>Conecte para visualizar e atualizar.</div>
+      <button class="drive-connect-btn" onclick="driveLogin()">Conectar Drive</button>
+    </div>`;
+}
+
+async function renderGaleriaDrive(lab) {
+  const container = document.getElementById('fotosContent');
+  container.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;padding:40px;gap:12px;color:var(--text3)"><span style="display:inline-block;animation:spin 1s linear infinite;font-size:20px">⟳</span> Carregando fotos...</div>`;
+
+  const fotos = {};
+  const tasks = [];
+  for (let p = 1; p <= 41; p++) {
+    tasks.push(buscarFotoPosto(lab, p, 'frente' ).then(f => { if(f) fotos[`${p}_frente`]  = f; }).catch(()=>{}));
+    tasks.push(buscarFotoPosto(lab, p, 'detalhe').then(d => { if(d) fotos[`${p}_detalhe`] = d; }).catch(()=>{}));
+  }
+  await Promise.allSettled(tasks);
+
+  let comFoto = 0;
+  for (let p = 1; p <= 41; p++) { if (fotos[`${p}_frente`] || fotos[`${p}_detalhe`]) comFoto++; }
+
+  let html = `<div class="fotos-section-label">Postos · ${lab}<span class="fotos-count">${comFoto}/41 com foto</span></div><div class="posto-grid">`;
+
+  for (let p = 1; p <= 41; p++) {
+    const fF  = fotos[`${p}_frente`];
+    const fD  = fotos[`${p}_detalhe`];
+    const pri = fF || fD;
+    const hasFoto = !!pri;
+    const thumb   = pri?.thumbnailLink?.replace('=s220','=s400') || '';
+    const dataStr = hasFoto ? new Date(pri.modifiedTime).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit'}) : 'Sem foto';
+    html += `<div class="posto-card${hasFoto?' has-foto':''}" onclick="openFotoModal('${lab}',${p})">
+      ${hasFoto ? `<img class="posto-thumb" src="${thumb}" loading="lazy" alt="Posto ${p}">` : `<div class="posto-thumb-empty"><span class="posto-thumb-icon">📷</span><span class="posto-thumb-txt">Sem foto</span></div>`}
+      ${hasFoto ? '<div class="posto-dot"></div>' : ''}
+      <div class="posto-label"><span class="posto-num">Posto ${String(p).padStart(2,'0')}</span><span class="posto-date">${dataStr}</span></div>
+    </div>`;
+  }
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+function updateFotosBadge() {
+  // Conta fotos salvas no localStorage (fallback local)
+  let count = 0;
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k && k.startsWith('foto_')) count++;
+  }
+  const badge = document.getElementById('fotosBadge');
+  if (count > 0) { badge.style.display = 'flex'; badge.textContent = count; }
+  else badge.style.display = 'none';
+}
+
+// ── Modal de foto ──
+function openFotoModal(lab, posto) {
+  fotoModal = { lab, posto, tipo:'frente', pendingBlob:null, driveFile:null };
+  document.getElementById('fotoModalTitle').textContent = `Posto ${String(posto).padStart(2,'0')}`;
+  document.getElementById('fotoModalSub').textContent   = `${lab} · Selecione o tipo`;
+  switchFotoTab('frente');
+  document.getElementById('fotoModalOverlay').classList.add('open');
+}
+
+function closeFotoModal() {
+  document.getElementById('fotoModalOverlay').classList.remove('open');
+  fotoModal.pendingBlob = null;
+  if (driveAutenticado()) renderGaleriaDrive(activeFotoLab);
+}
+
+function closeFotoModalOutside(e) { if (e.target === document.getElementById('fotoModalOverlay')) closeFotoModal(); }
+
+async function switchFotoTab(tipo) {
+  fotoModal.tipo = tipo;
+  fotoModal.pendingBlob = null;
+  fotoModal.driveFile = null;
+  document.getElementById('fotoTabFrente').classList.toggle('active',  tipo==='frente');
+  document.getElementById('fotoTabDetalhe').classList.toggle('active', tipo==='detalhe');
+  document.getElementById('fotoUploadInput').value = '';
+  await _renderFotoPreview();
+}
+
+async function _renderFotoPreview() {
+  const { lab, posto, tipo } = fotoModal;
+  const img     = document.getElementById('fotoPreviewImg');
+  const empty   = document.getElementById('fotoEmptyArea');
+  const saveBtn = document.getElementById('fotoSaveBtn');
+  const delBtn  = document.getElementById('fotoDeleteBtn');
+
+  if (fotoModal.pendingBlob) {
+    img.src = URL.createObjectURL(fotoModal.pendingBlob);
+    img.style.display = 'block'; empty.style.display = 'none';
+    saveBtn.disabled = false;
+    delBtn.style.display = 'none';
+    return;
+  }
+
+  if (driveAutenticado()) {
+    document.getElementById('fotoLoadingOverlay').classList.add('active');
+    const arquivo = await buscarFotoPosto(lab, posto, tipo).catch(()=>null);
+    document.getElementById('fotoLoadingOverlay').classList.remove('active');
+    fotoModal.driveFile = arquivo;
+    if (arquivo?.thumbnailLink) {
+      img.src = arquivo.thumbnailLink.replace('=s220','=s800');
+      img.style.display = 'block'; empty.style.display = 'none';
+      saveBtn.disabled = true;
+      delBtn.style.display = 'block';
+    } else {
+      img.style.display = 'none'; empty.style.display = 'flex';
+      saveBtn.disabled = true; delBtn.style.display = 'none';
+    }
+  } else {
+    // Fallback localStorage
+    const saved = _getFotoLocal(lab, posto, tipo);
+    if (saved) {
+      img.src = saved.b64; img.style.display = 'block'; empty.style.display = 'none';
+      saveBtn.disabled = true; delBtn.style.display = 'block';
+    } else {
+      img.style.display = 'none'; empty.style.display = 'flex';
+      saveBtn.disabled = true; delBtn.style.display = 'none';
+    }
+  }
+}
+
+function handleFotoUpload(e) {
+  const file = e.target.files[0]; if (!file) return;
+  fotoModal.pendingBlob = file;
+  _renderFotoPreview();
+}
+
+async function salvarFoto() {
+  if (!fotoModal.pendingBlob) return;
+  const { lab, posto, tipo, pendingBlob } = fotoModal;
+
+  if (driveAutenticado()) {
+    document.getElementById('fotoLoadingOverlay').classList.add('active');
+    document.getElementById('fotoSaveBtn').disabled = true;
+    try {
+      await substituirFotoPosto(lab, posto, tipo, pendingBlob);
+      showToast('Foto salva no Drive ✓', 'success');
+      fotoModal.pendingBlob = null;
+      await _renderFotoPreview();
+    } catch(err) {
+      showToast('Erro ao salvar no Drive. Salvando localmente.', 'info');
+      _salvarFotoLocal(lab, posto, tipo, pendingBlob);
+    }
+    document.getElementById('fotoLoadingOverlay').classList.remove('active');
+  } else {
+    _salvarFotoLocal(lab, posto, tipo, pendingBlob);
+  }
+  updateFotosBadge();
+}
+
+async function deletarFoto() {
+  const { lab, posto, tipo, driveFile } = fotoModal;
+  if (!confirm('Remover esta foto?')) return;
+  if (driveAutenticado() && driveFile) {
+    document.getElementById('fotoLoadingOverlay').classList.add('active');
+    await deletarArquivoDrive(driveFile.id).catch(()=>{});
+    document.getElementById('fotoLoadingOverlay').classList.remove('active');
+    showToast('Foto removida do Drive.', 'info', 1800);
+  } else {
+    _deletarFotoLocal(lab, posto, tipo);
+  }
+  fotoModal.driveFile = null;
+  await _renderFotoPreview();
+  updateFotosBadge();
+}
+
+// Fallback localStorage para fotos
+function _fotoLocalKey(lab,posto,tipo) { return `foto_${lab.replace(/\s/g,'')}_p${String(posto).padStart(2,'0')}_${tipo}`; }
+function _getFotoLocal(lab,posto,tipo) { try{ const r=localStorage.getItem(_fotoLocalKey(lab,posto,tipo)); return r?JSON.parse(r):null; }catch(e){return null;} }
+function _salvarFotoLocal(lab,posto,tipo,blob) {
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try { localStorage.setItem(_fotoLocalKey(lab,posto,tipo), JSON.stringify({b64:ev.target.result,savedAt:new Date().toISOString()})); }
+    catch(e) { showToast('Armazenamento cheio.','error'); return; }
+    showToast('Foto salva localmente ✓','success');
+    fotoModal.pendingBlob = null;
+    _renderFotoPreview();
+    updateFotosBadge();
+  };
+  reader.readAsDataURL(blob);
+}
+function _deletarFotoLocal(lab,posto,tipo) { localStorage.removeItem(_fotoLocalKey(lab,posto,tipo)); showToast('Foto removida.','info',1800); }
+
+// ══════════════════════════════════════════════
+// REPORTE TI
+// ══════════════════════════════════════════════
+let rFotoB64 = null;
+
+function handleRFoto(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    rFotoB64 = ev.target.result;
+    const p = document.getElementById('rPreview');
+    p.src = rFotoB64; p.style.display = 'block';
+    document.getElementById('rFotoLabel').textContent = '✓ Foto selecionada';
+  };
+  reader.readAsDataURL(file);
+}
+
+async function submitReporte() {
+  const lab  = document.getElementById('rLab').value;
+  const pc   = document.getElementById('rPc').value;
+  const tipo = document.getElementById('rTipo').value;
+  const desc = document.getElementById('rDesc').value.trim();
+
+  if (!lab)  { showToast('Selecione um laboratório','info'); return; }
+  if (!pc || parseInt(pc)<1 || parseInt(pc)>41) { showToast('PC deve ser entre 1 e 41','info'); return; }
+  if (!tipo) { showToast('Selecione o tipo de problema','info'); return; }
+  if (!desc) { showToast('Descreva o problema','info'); return; }
+
+  const hora    = new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  const temFoto = !!rFotoB64;
+  const linhas  = [
+    `🔧 *TI Reporte — ${lab}*`,
+    ``,
+    `📍 *Local:* ${lab} · PC ${String(pc).padStart(2,'0')}`,
+    `⚙️ *Problema:* ${tipo}`,
+    `🕐 *Horário:* ${hora}`,
+    ``,
+    `📝 *Descrição:*`,
+    desc,
+  ];
+  if (temFoto) linhas.push(``, `📎 *Foto:* salva no celular, envie em seguida`);
+  linhas.push(``, `_CSE Lab System_`);
+  const msgWA = linhas.join('\n');
+
+  // Tenta Apps Script se URL configurada e há foto
+  if (CFG.WEB_APP_URL && rFotoB64) {
+    document.getElementById('rLoading').classList.add('active');
+    document.getElementById('rSubmitBtn').disabled = true;
+    try {
+      const r = await fetch(CFG.WEB_APP_URL, { method:'POST', body: JSON.stringify({ laboratorio:lab, pc, componente:tipo, descricao:desc, foto:rFotoB64 }) });
+      const d = await r.json();
+      document.getElementById('rLoading').classList.remove('active');
+      if (d.success) {
+        showToast('Reporte enviado ✓','success');
+        _limparFormReporte();
+        if(d.linkWhatsApp) setTimeout(()=>window.open(d.linkWhatsApp,'_blank'),1200);
+        document.getElementById('rSubmitBtn').disabled = false;
+        return;
+      }
+    } catch(e) {}
+    document.getElementById('rLoading').classList.remove('active');
+    document.getElementById('rSubmitBtn').disabled = false;
+  }
+
+  // Abre WhatsApp com o texto — foto fica salva no celular
+  window.open(`https://wa.me/${CFG.NUMERO_TI}?text=${encodeURIComponent(msgWA)}`, '_blank');
+  if (temFoto) showToast('WhatsApp aberto · envie a foto em seguida 📎','success', 3500);
+  else showToast('Abrindo WhatsApp...','success');
+  _limparFormReporte();
+}
+
+function _limparFormReporte() {
+  ['rLab','rPc','rTipo','rDesc'].forEach(id => document.getElementById(id).value='');
+  document.getElementById('rPreview').style.display='none';
+  document.getElementById('rFotoLabel').textContent='📷 Toque para tirar foto ou selecionar';
+  rFotoB64 = null;
+}
+// ══════════════════════════════════════════════
+// SERVICE WORKER
+// ══════════════════════════════════════════════
+if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+  navigator.serviceWorker.register('./sw.js')
+    .catch(e => console.warn('SW:', e));
+}
+
+// Processa token OAuth no carregamento (vindo de redirect)
+if (window.location.hash.includes('access_token')) {
+  processarTokenCallback();
+  // Vai direto para fotos após login
+  window.addEventListener('load', () => navTo('fotos'));
+}
+</script>
+</body>
+</html>
