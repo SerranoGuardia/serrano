@@ -1,9 +1,8 @@
 // js/config.js
-// ⚠️ Seguro para commitar — não contém client_secret
-// Preencha CLIENT_ID e PASTAS após configurar o Google Cloud Console (Conta A)
+// Configurações do Google Drive API e WhatsApp
 
 export const CONFIG = {
-  // Obtido em: console.cloud.google.com → Credenciais → ID do Cliente OAuth
+  // Obtido em: console.cloud.google.com -> Credenciais -> ID do Cliente OAuth
   CLIENT_ID: '752637013195-2efafcn119m6ssohnhn4h6ih6alb72ie.apps.googleusercontent.com',
 
   // URL exata cadastrada no Google Cloud Console como URI de redirecionamento
@@ -12,9 +11,7 @@ export const CONFIG = {
   // Escopo necessário para ler e escrever no Drive
   SCOPES: 'https://www.googleapis.com/auth/drive',
 
-  // IDs das pastas no Google Drive da Conta A
-  // Obtenha abrindo a pasta no Drive e copiando o ID da URL:
-  // drive.google.com/drive/folders/ESTE_EH_O_ID
+  // IDs das pastas no Google Drive para cada laboratório
   PASTAS: {
     'LAB 01': '17MOU0hIc8m6JoIttVdo2RePqNJCvB4c0',
     'LAB 02': '1kxEiKmahxGcmpzEp8EeC49hykdXeRG5P',
@@ -24,4 +21,7 @@ export const CONFIG = {
 
   // Número do WhatsApp do responsável de TI (com DDI, sem + ou espaços)
   NUMERO_TI: '5511988720669',
+
+  // URL do Google Apps Script (opcional, para envio do reporte com imagem via API)
+  WEB_APP_URL: '',
 };

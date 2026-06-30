@@ -7,10 +7,12 @@ const SHELL = [
   './',
   './index.html',
   './manifest.json',
+  './css/style.css',
   './js/config.js',
   './js/auth.js',
   './js/drive.js',
   './js/whatsapp.js',
+  './js/main.js',
   './icons/icon-192.png',
   './icons/icon-512.png',
 ];
