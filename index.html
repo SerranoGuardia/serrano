@@ -307,7 +307,7 @@
 // ══════════════════════════════════════════════
 const CFG = {
   CLIENT_ID:    '752637013195-2efafcn119m6ssohnhn4h6ih6alb72ie.apps.googleusercontent.com',
-  REDIRECT_URI: 'https://SerranoGuardia.github.io/serrano/',
+  REDIRECT_URI: 'https://serranoguardia.github.io/serrano/',
   SCOPES:       'https://www.googleapis.com/auth/drive',
   PASTAS: {
     'LAB 01': '17MOU0hIc8m6JoIttVdo2RePqNJCvB4c0',
@@ -1170,7 +1170,18 @@ let _pendingPostAuthNav = null; // nav aguardando GIS carregar (fluxo redirect m
       client_id: CFG.CLIENT_ID,
       scope:     CFG.SCOPES,
       callback:  (resp) => {
-        if (resp.error) { showToast('Erro ao conectar Drive: ' + resp.error, 'error'); return; }
+        if (resp.error) {
+          // popup_closed_by_user = usuário fechou, não faz nada
+          if (resp.error === 'popup_closed_by_user') return;
+          // popup_failed = mobile bloqueou popup, cai no redirect manual
+          if (resp.error === 'popup_failed_to_open' || resp.error === 'access_denied') {
+            _fallbackRedirectLogin();
+            return;
+          }
+          showToast('Erro ao conectar Drive: ' + resp.error, 'error');
+          return;
+        }
+        sessionStorage.removeItem('cse_auth_pending');
         const expiry = Date.now() + (parseInt(resp.expires_in) * 1000);
         localStorage.setItem(TK_KEY,  resp.access_token);
         localStorage.setItem(EXP_KEY, String(expiry));
@@ -1189,9 +1200,21 @@ let _pendingPostAuthNav = null; // nav aguardando GIS carregar (fluxo redirect m
 
 function driveLogin() {
   if (!_gisClient) { showToast('Aguarde, carregando...', 'info'); return; }
-  // Sem prompt:'select_account' — no mobile evita abrir aba/popup desnecessário
-  // se o usuário já autorizou antes. Adicione prompt:'select_account' só para trocar de conta.
+  sessionStorage.setItem('cse_auth_pending', '1');
   _gisClient.requestAccessToken({});
+}
+
+// Fallback para mobile: redirect OAuth direto (quando popup é bloqueado)
+function _fallbackRedirectLogin() {
+  sessionStorage.setItem('cse_auth_pending', '1');
+  const params = new URLSearchParams({
+    client_id:     CFG.CLIENT_ID,
+    redirect_uri:  CFG.REDIRECT_URI,
+    response_type: 'token',
+    scope:         CFG.SCOPES,
+    include_granted_scopes: 'true',
+  });
+  window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
 }
 
 // Mantida por compatibilidade — GIS não usa redirect, mas processamos hash legado
@@ -1797,8 +1820,17 @@ if ('serviceWorker' in navigator) {
 
 // Processa token via URL hash (fluxo redirect — comum em mobile)
 if (window.location.hash.includes('access_token')) {
-  processarTokenCallback();
-  // Se o GIS já carregou, navega imediatamente; senão agenda para depois do onload
+  processarTokenCallback(); // salva token no localStorage e limpa a URL
+  sessionStorage.removeItem('cse_auth_pending');
+  // Aguarda GIS carregar e navega para fotos
+  if (_gisClient) {
+    navTo('fotos');
+  } else {
+    _pendingPostAuthNav = () => navTo('fotos');
+  }
+} else if (sessionStorage.getItem('cse_auth_pending') && driveAutenticado()) {
+  // Celular: voltou de redirect mas sem hash (token já foi salvo numa passagem anterior)
+  sessionStorage.removeItem('cse_auth_pending');
   if (_gisClient) {
     navTo('fotos');
   } else {
