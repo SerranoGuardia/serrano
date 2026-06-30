@@ -1159,6 +1159,7 @@ const TK_KEY  = 'cse_token';
 const EXP_KEY = 'cse_expiry';
 
 let _gisClient = null;
+let _pendingPostAuthNav = null; // nav aguardando GIS carregar (fluxo redirect mobile)
 
 // Carrega a lib GIS e inicializa o token client
 (function _initGIS() {
@@ -1177,13 +1178,20 @@ let _gisClient = null;
         initFotos();
       },
     });
+    // Se chegou aqui via redirect mobile com token já salvo, completa a navegação
+    if (_pendingPostAuthNav) {
+      _pendingPostAuthNav();
+      _pendingPostAuthNav = null;
+    }
   };
   document.head.appendChild(s);
 })();
 
 function driveLogin() {
   if (!_gisClient) { showToast('Aguarde, carregando...', 'info'); return; }
-  _gisClient.requestAccessToken({ prompt: 'select_account' });
+  // Sem prompt:'select_account' — no mobile evita abrir aba/popup desnecessário
+  // se o usuário já autorizou antes. Adicione prompt:'select_account' só para trocar de conta.
+  _gisClient.requestAccessToken({});
 }
 
 // Mantida por compatibilidade — GIS não usa redirect, mas processamos hash legado
@@ -1206,6 +1214,18 @@ function getToken() {
 }
 
 function driveAutenticado() { return !!getToken(); }
+
+// Verifica periodicamente se o token vai expirar nos próximos 5 min e avisa
+setInterval(() => {
+  const e = parseInt(localStorage.getItem(EXP_KEY) || '0', 10);
+  if (!e) return;
+  const minLeft = Math.round((e - Date.now()) / 60000);
+  if (minLeft === 5) showToast('Drive: sessão expira em 5 min. Reconecte em breve.', 'info', 5000);
+  if (minLeft <= 0 && document.getElementById('screen-fotos')?.classList.contains('active')) {
+    showToast('Sessão do Drive expirada. Toque em "Conectar Drive".', 'info', 6000);
+    renderConectarDrive();
+  }
+}, 60000);
 
 function driveLogout() {
   const token = getToken();
@@ -1775,10 +1795,15 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js');
 }
 
-// Processa token legado via URL hash (fallback)
+// Processa token via URL hash (fluxo redirect — comum em mobile)
 if (window.location.hash.includes('access_token')) {
   processarTokenCallback();
-  window.addEventListener('load', () => navTo('fotos'));
+  // Se o GIS já carregou, navega imediatamente; senão agenda para depois do onload
+  if (_gisClient) {
+    navTo('fotos');
+  } else {
+    _pendingPostAuthNav = () => navTo('fotos');
+  }
 }
 </script>
 </body>
