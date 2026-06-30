@@ -11,6 +11,37 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <title>CSE · Lab System</title>
 <link rel="stylesheet" href="css/style.css">
+<style>
+  /* Lightbox de foto em tela cheia */
+  .foto-preview-area { cursor: zoom-in; }
+  .foto-lightbox-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.95);
+    z-index: 9999;
+    align-items: center; justify-content: center;
+    padding: 24px;
+    cursor: zoom-out;
+  }
+  .foto-lightbox-overlay.open { display: flex; }
+  .foto-lightbox-img {
+    max-width: 100%; max-height: 100%;
+    object-fit: contain;
+    border-radius: 8px;
+    cursor: default;
+    animation: fotoLightboxIn .2s ease;
+  }
+  @keyframes fotoLightboxIn { from { opacity:0; transform:scale(.96);} to { opacity:1; transform:scale(1);} }
+  .foto-lightbox-close {
+    position: fixed; top: 16px; right: 16px;
+    width: 40px; height: 40px; border-radius: 50%;
+    background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.15);
+    color: #fff; font-size: 18px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; z-index: 10000;
+  }
+</style>
 </head>
 <body>
 
@@ -184,7 +215,7 @@
       <button class="foto-tab-btn active" id="fotoTabFrente"  onclick="switchFotoTab('frente')">Frente</button>
       <button class="foto-tab-btn"        id="fotoTabDetalhe" onclick="switchFotoTab('detalhe')">Detalhe</button>
     </div>
-    <img   class="foto-preview-area" id="fotoPreviewImg" alt="foto" style="display:none">
+    <img   class="foto-preview-area" id="fotoPreviewImg" alt="foto" style="display:none" onclick="openFotoLightbox()">
     <div   class="foto-empty-area"   id="fotoEmptyArea"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.4"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg><span>Nenhuma foto ainda</span></div>
     <label class="foto-upload-btn">
       Tirar foto / selecionar
@@ -193,6 +224,12 @@
     <button class="foto-save-btn"   id="fotoSaveBtn"   onclick="salvarFoto()"  disabled>Salvar foto</button>
     <button class="foto-delete-btn" id="fotoDeleteBtn" onclick="deletarFoto()" style="display:none">Remover foto</button>
   </div>
+</div>
+
+<!-- Lightbox tela cheia -->
+<div class="foto-lightbox-overlay" id="fotoLightboxOverlay" onclick="closeFotoLightbox()">
+  <button class="foto-lightbox-close" onclick="closeFotoLightbox()">✕</button>
+  <img class="foto-lightbox-img" id="fotoLightboxImg" alt="foto ampliada">
 </div>
 
 <!-- ══════════ REPORTE TI ══════════ -->
@@ -1512,6 +1549,17 @@ function closeFotoModal() {
 }
 
 function closeFotoModalOutside(e) { if (e.target === document.getElementById('fotoModalOverlay')) closeFotoModal(); }
+
+// ── Lightbox tela cheia ──
+function openFotoLightbox() {
+  const img = document.getElementById('fotoPreviewImg');
+  if (!img.src || img.style.display === 'none') return;
+  document.getElementById('fotoLightboxImg').src = img.src;
+  document.getElementById('fotoLightboxOverlay').classList.add('open');
+}
+function closeFotoLightbox() {
+  document.getElementById('fotoLightboxOverlay').classList.remove('open');
+}
 
 async function switchFotoTab(tipo) {
   fotoModal.tipo = tipo;
