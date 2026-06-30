@@ -215,7 +215,7 @@
       <button class="foto-tab-btn active" id="fotoTabFrente"  onclick="switchFotoTab('frente')">Frente</button>
       <button class="foto-tab-btn"        id="fotoTabDetalhe" onclick="switchFotoTab('detalhe')">Detalhe</button>
     </div>
-    <img   class="foto-preview-area" id="fotoPreviewImg" alt="foto" style="display:none" onclick="openFotoLightbox()">
+    <img   class="foto-preview-area" id="fotoPreviewImg" alt="foto" style="display:none" onclick="event.stopPropagation(); openFotoLightbox()">
     <div   class="foto-empty-area"   id="fotoEmptyArea"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.4"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg><span>Nenhuma foto ainda</span></div>
     <label class="foto-upload-btn">
       Tirar foto / selecionar
@@ -227,7 +227,7 @@
 </div>
 
 <!-- Lightbox tela cheia -->
-<div class="foto-lightbox-overlay" id="fotoLightboxOverlay" onclick="closeFotoLightbox()">
+<div class="foto-lightbox-overlay" id="fotoLightboxOverlay">
   <button class="foto-lightbox-close" onclick="closeFotoLightbox()">✕</button>
   <img class="foto-lightbox-img" id="fotoLightboxImg" alt="foto ampliada">
 </div>
@@ -1496,8 +1496,13 @@ async function renderGaleriaDrive(lab) {
       const fF = postos[p].frente, fD = postos[p].detalhe;
       const pri = fF || fD;
       const dataStr = new Date(pri.modifiedTime).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit'});
+      // thumbnailLink: substitui tamanho para s400 (melhor qualidade na grade)
+      const thumb = pri.thumbnailLink ? pri.thumbnailLink.replace(/=s\d+/, '=s400') : null;
       html += `<div class="posto-card has-foto" onclick="openFotoModal('${lab}','${p}',false)">
-        <img class="posto-thumb" data-drive-id="${pri.id}" alt="Posto ${p}" loading="lazy">
+        ${thumb
+          ? `<img class="posto-thumb" src="${thumb}" alt="Posto ${p}" loading="lazy" data-drive-id="${pri.id}">`
+          : `<img class="posto-thumb" data-drive-id="${pri.id}" data-needs-fetch="1" alt="Posto ${p}" loading="lazy">`
+        }
         <div class="posto-dot"></div>
         <div class="posto-label"><span class="posto-num">Posto ${String(p).padStart(2,'0')}</span><span class="posto-date">${dataStr}</span></div>
       </div>`;
@@ -1510,8 +1515,12 @@ async function renderGaleriaDrive(lab) {
     html += `<div class="fotos-section-label" style="margin-top:18px">Outras fotos<span class="fotos-count">${extras.length}</span></div><div class="posto-grid">`;
     extras.forEach(arq => {
       const dataStr = new Date(arq.modifiedTime).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit'});
+      const thumb = arq.thumbnailLink ? arq.thumbnailLink.replace(/=s\d+/, '=s400') : null;
       html += `<div class="posto-card has-foto" onclick="openFotoExtra('${lab}','${arq.id}')">
-        <img class="posto-thumb" data-drive-id="${arq.id}" alt="${arq.name}" loading="lazy">
+        ${thumb
+          ? `<img class="posto-thumb" src="${thumb}" alt="${arq.name}" loading="lazy" data-drive-id="${arq.id}">`
+          : `<img class="posto-thumb" data-drive-id="${arq.id}" data-needs-fetch="1" alt="${arq.name}" loading="lazy">`
+        }
         <div class="posto-dot"></div>
         <div class="posto-label"><span class="posto-num" style="font-size:11px">${arq.name}</span><span class="posto-date">${dataStr}</span></div>
       </div>`;
@@ -1521,12 +1530,23 @@ async function renderGaleriaDrive(lab) {
 
   container.innerHTML = html;
 
-  // Carrega imagens via fetch autenticado após render (lazy)
-  container.querySelectorAll('img[data-drive-id]').forEach(async img => {
-    const url = await _fetchDriveImgUrl(img.dataset.driveId);
-    if (url) img.src = url;
-    else img.style.opacity = '0.3';
-  });
+  // Apenas imagens sem thumbnailLink precisam de fetch autenticado (caso raro)
+  // Usa IntersectionObserver para só buscar quando visível na tela
+  const fallbackImgs = container.querySelectorAll('img[data-needs-fetch="1"]');
+  if (fallbackImgs.length === 0) return;
+
+  const observer = new IntersectionObserver((entries, obs) => {
+    entries.forEach(async entry => {
+      if (!entry.isIntersecting) return;
+      obs.unobserve(entry.target);
+      const img = entry.target;
+      const url = await _fetchDriveImgUrl(img.dataset.driveId);
+      if (url) { img.src = url; img.removeAttribute('data-needs-fetch'); }
+      else img.style.opacity = '0.3';
+    });
+  }, { rootMargin: '200px' }); // pré-carrega 200px antes de entrar na tela
+
+  fallbackImgs.forEach(img => observer.observe(img));
 }
 
 function updateFotosBadge() {
@@ -1603,6 +1623,13 @@ function openFotoLightbox() {
 function closeFotoLightbox() {
   document.getElementById('fotoLightboxOverlay').classList.remove('open');
 }
+// Fecha o lightbox ao tocar fora da imagem (overlay), mas não ao tocar na imagem
+document.getElementById('fotoLightboxOverlay').addEventListener('click', function(e) {
+  if (e.target === this) closeFotoLightbox();
+});
+document.getElementById('fotoLightboxImg').addEventListener('click', function(e) {
+  e.stopPropagation(); // toque na imagem não fecha
+});
 
 async function switchFotoTab(tipo) {
   fotoModal.tipo = tipo;
