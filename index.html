@@ -1194,24 +1194,79 @@ const DRIVE_UP   = 'https://www.googleapis.com/upload/drive/v3';
 
 function authH() { return { Authorization: `Bearer ${getToken()}` }; }
 
-async function buscarFotoPosto(lab, posto, tipo) {
+// Arquivos que NÃO são postos de trabalho (vão para "Outras fotos")
+const ARQUIVOS_ESPECIAIS = ['professor', 'proflab', 'cpub', 'cpud', 'extra', 'lousa', 'quadro'];
+function ehArquivoEspecial(nomeArquivo) {
+  const nomeSemExt = nomeArquivo.replace(/\.[^.]+$/, '').toLowerCase();
+  return ARQUIVOS_ESPECIAIS.some(esp => nomeSemExt.includes(esp));
+}
+
+// Busca TODAS as fotos da pasta do lab em 1 única requisição
+async function listarTodasFotos(lab) {
   const pastaId = CFG.PASTAS[lab];
-  // Busca flexível: qualquer arquivo que contenha o número do posto E o tipo na mesma pasta
-  const numStr = String(posto).padStart(2,'0');
-  // Tenta primeiro o padrão exato, depois padrão sem underscore, depois só número+tipo
-  const queries = [
-    `'${pastaId}' in parents and name contains 'posto_${numStr}_${tipo}' and trashed=false`,
-    `'${pastaId}' in parents and name contains '${numStr}' and name contains '${tipo}' and trashed=false`,
-    `'${pastaId}' in parents and name contains 'posto${numStr}' and name contains '${tipo}' and trashed=false`,
-  ];
-  for (const q of queries) {
-    const p = new URLSearchParams({ q, fields:'files(id,name,modifiedTime)', orderBy:'modifiedTime desc', pageSize:'5' });
-    const r = await fetch(`${DRIVE_BASE}/files?${p}`, { headers: authH() });
-    if (!r.ok) continue;
-    const d = await r.json();
-    if (d.files?.[0]) return d.files[0];
+  if (!pastaId) throw new Error(`Pasta não configurada para o ${lab}`);
+  const params = new URLSearchParams({
+    q:        `'${pastaId}' in parents and mimeType contains 'image/' and trashed = false`,
+    fields:   'files(id,name,mimeType,modifiedTime,thumbnailLink,webViewLink)',
+    orderBy:  'name',
+    pageSize: '1000',
+  });
+  const res = await fetch(`${DRIVE_BASE}/files?${params}`, { headers: authH() });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(`Erro na API do Drive (${res.status}): ${err?.error?.message || res.statusText}`);
   }
-  return null;
+  const data = await res.json();
+  return data.files || [];
+}
+
+// Agrupa fotos por posto quando o nome bate com um padrão reconhecível.
+// Tudo que não bate (ou está marcado como especial) vai para `extras`.
+function organizarFotosLab(lab, arquivos) {
+  const postosMap = {};
+  const extras = [];
+  const labMatch = lab.match(/\d+/);
+  const labIndex = labMatch ? parseInt(labMatch[0]) : null;
+
+  for (const arq of arquivos) {
+    if (ehArquivoEspecial(arq.name)) { extras.push(arq); continue; }
+
+    const nameLower = arq.name.toLowerCase();
+    const nameWithoutExt = arq.name.replace(/\.[^.]+$/, '');
+    let designation = null;
+    let type = 'frente';
+
+    if (nameLower.includes('detalhe') || nameLower.includes('detail') ||
+        nameLower.includes('det') || nameLower.endsWith('d') ||
+        nameLower.includes('_d') || nameLower.includes('-d')) {
+      type = 'detalhe';
+    }
+
+    if (lab === 'LAB 04') {
+      const matchArena = nameWithoutExt.match(/([a-d])\s*[-_]?\s*(\d+)/i);
+      if (matchArena) designation = matchArena[1].toUpperCase() + matchArena[2];
+    } else if (labIndex !== null) {
+      const pattern3Digits = new RegExp(`\\b${labIndex}(\\d{2})\\b`);
+      const match3Digits = nameWithoutExt.match(pattern3Digits);
+      if (match3Digits) {
+        designation = parseInt(match3Digits[1]);
+      } else {
+        const matchGeneric = nameWithoutExt.match(/(?:posto|pc|posicao)?\s*[-_]?\s*(\d+)/i);
+        if (matchGeneric) designation = parseInt(matchGeneric[1]);
+      }
+    }
+
+    if (designation !== null && designation !== undefined && !Number.isNaN(designation)) {
+      if (!postosMap[designation]) postosMap[designation] = { frente: null, detalhe: null };
+      // Se já existe uma foto nesse slot, a mais recente fica como principal e a outra vai pra extras
+      if (postosMap[designation][type]) extras.push(arq);
+      else postosMap[designation][type] = arq;
+    } else {
+      extras.push(arq);
+    }
+  }
+
+  return { postos: postosMap, extras };
 }
 
 async function deletarArquivoDrive(fileId) {
@@ -1240,12 +1295,28 @@ async function uploadParaDrive(pastaId, nomeArquivo, blob) {
   return r.json();
 }
 
+// Nome sugerido ao SALVAR uma foto nova pelo app (mantém um padrão pra próximas leituras serem fáceis)
+function obterNomeSugerido(lab, posto, tipo) {
+  let baseName = '';
+  if (lab === 'LAB 04') {
+    baseName = String(posto).toUpperCase();
+  } else {
+    const labMatch = lab.match(/\d+/);
+    const labIndex = labMatch ? labMatch[0] : '1';
+    baseName = `${labIndex}${String(posto).padStart(2, '0')}`;
+  }
+  return tipo === 'detalhe' ? `${baseName}_detalhe.jpg` : `${baseName}.jpg`;
+}
+
 async function substituirFotoPosto(lab, posto, tipo, blob) {
   const pastaId     = CFG.PASTAS[lab];
-  const nomeArquivo = `posto_${String(posto).padStart(2,'0')}_${tipo}.jpg`;
-  const existente   = await buscarFotoPosto(lab, posto, tipo);
-  if (existente) await deletarArquivoDrive(existente.id);
-  return uploadParaDrive(pastaId, nomeArquivo, blob);
+  const nomeArquivo = obterNomeSugerido(lab, posto, tipo);
+  // Busca o existente a partir do cache já carregado em memória (evita nova request)
+  const existente = _driveCache[lab]?.postos?.[posto]?.[tipo] || null;
+  if (existente) await deletarArquivoDrive(existente.id).catch(()=>{});
+  const novo = await uploadParaDrive(pastaId, nomeArquivo, blob);
+  await _refreshDriveCache(lab); // mantém cache em sincronia
+  return novo;
 }
 
 // ══════════════════════════════════════════════
@@ -1253,14 +1324,20 @@ async function substituirFotoPosto(lab, posto, tipo, blob) {
 // ══════════════════════════════════════════════
 const LABS_LIST = ['LAB 01','LAB 02','LAB 03','LAB 04'];
 let activeFotoLab = 'LAB 01';
-let fotoModal = { lab:'', posto:0, tipo:'frente', pendingBlob:null, driveFile:null };
+let fotoModal = { lab:'', posto:0, tipo:'frente', pendingBlob:null, driveFile:null, isExtra:false };
+
+// Cache em memória: { 'LAB 01': { postos:{...}, extras:[...] } }
+const _driveCache = {};
+
+async function _refreshDriveCache(lab) {
+  const arquivos = await listarTodasFotos(lab);
+  _driveCache[lab] = organizarFotosLab(lab, arquivos);
+  return _driveCache[lab];
+}
 
 function initFotos() {
-  // Processa token se vier na URL (callback OAuth)
   if (window.location.hash.includes('access_token')) processarTokenCallback();
-
   renderFotosLabTabs();
-
   const tokenInfo = document.getElementById('driveTokenInfo');
   if (driveAutenticado()) {
     tokenInfo.style.display = 'flex';
@@ -1296,7 +1373,6 @@ async function _fetchDriveImgUrl(fileId) {
   const token = getToken();
   if (!token || !fileId) return null;
   try {
-    // Baixa o arquivo via API autenticada
     const r = await fetch(
       `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
       { headers: { Authorization: `Bearer ${token}` } }
@@ -1310,35 +1386,59 @@ async function renderGaleriaDrive(lab) {
   const container = document.getElementById('fotosContent');
   container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;padding:40px;gap:12px;color:var(--text-3)"><svg style="animation:spin 1s linear infinite" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 11-6.219-8.56"/></svg>&nbsp;Carregando fotos...</div>';
 
-  const fotos = {};
-  const tasks = [];
-  for (let p = 1; p <= 41; p++) {
-    tasks.push(buscarFotoPosto(lab, p, 'frente' ).then(f => { if(f) fotos[`${p}_frente`]  = f; }).catch(()=>{}));
-    tasks.push(buscarFotoPosto(lab, p, 'detalhe').then(d => { if(d) fotos[`${p}_detalhe`] = d; }).catch(()=>{}));
+  let grupo;
+  try {
+    grupo = await _refreshDriveCache(lab);
+  } catch (e) {
+    container.innerHTML = `<div style="padding:40px;text-align:center;color:var(--text-3)">Erro ao carregar fotos do Drive.<br><span style="font-size:12px">${e.message}</span></div>`;
+    return;
   }
-  await Promise.allSettled(tasks);
 
-  let comFoto = 0;
-  for (let p = 1; p <= 41; p++) { if (fotos[`${p}_frente`] || fotos[`${p}_detalhe`]) comFoto++; }
+  const { postos, extras } = grupo;
+  const postoKeys = Object.keys(postos).sort((a,b) => {
+    const na = parseInt(a), nb = parseInt(b);
+    if (!Number.isNaN(na) && !Number.isNaN(nb)) return na - nb;
+    return String(a).localeCompare(String(b));
+  });
 
-  let html = `<div class="fotos-section-label">Postos · ${lab}<span class="fotos-count">${comFoto}/41 com foto</span></div><div class="posto-grid">`;
-
-  for (let p = 1; p <= 41; p++) {
-    const fF  = fotos[`${p}_frente`];
-    const fD  = fotos[`${p}_detalhe`];
-    const pri = fF || fD;
-    const hasFoto = !!pri;
-    const dataStr = hasFoto ? new Date(pri.modifiedTime).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit'}) : 'Sem foto';
-    html += `<div class="posto-card${hasFoto?' has-foto':''}" onclick="openFotoModal('${lab}',${p})">
-      ${hasFoto
-        ? `<img class="posto-thumb" data-drive-id="${pri.id}" alt="Posto ${p}" loading="lazy">`
-        : `<div class="posto-thumb-empty"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.4"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg><span class="posto-thumb-txt">Sem foto</span></div>`
-      }
-      ${hasFoto ? '<div class="posto-dot"></div>' : ''}
-      <div class="posto-label"><span class="posto-num">Posto ${String(p).padStart(2,'0')}</span><span class="posto-date">${dataStr}</span></div>
-    </div>`;
+  const totalFotos = postoKeys.length + extras.length;
+  if (totalFotos === 0) {
+    container.innerHTML = `<div style="padding:40px;text-align:center;color:var(--text-3)">Nenhuma foto encontrada nesta pasta do Drive.</div>`;
+    return;
   }
-  html += '</div>';
+
+  let html = '';
+
+  // ── Postos reconhecidos ──
+  if (postoKeys.length > 0) {
+    html += `<div class="fotos-section-label">Postos · ${lab}<span class="fotos-count">${postoKeys.length} identificado${postoKeys.length>1?'s':''}</span></div><div class="posto-grid">`;
+    postoKeys.forEach(p => {
+      const fF = postos[p].frente, fD = postos[p].detalhe;
+      const pri = fF || fD;
+      const dataStr = new Date(pri.modifiedTime).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit'});
+      html += `<div class="posto-card has-foto" onclick="openFotoModal('${lab}','${p}',false)">
+        <img class="posto-thumb" data-drive-id="${pri.id}" alt="Posto ${p}" loading="lazy">
+        <div class="posto-dot"></div>
+        <div class="posto-label"><span class="posto-num">Posto ${String(p).padStart(2,'0')}</span><span class="posto-date">${dataStr}</span></div>
+      </div>`;
+    });
+    html += '</div>';
+  }
+
+  // ── Outras fotos (sem padrão reconhecido) ──
+  if (extras.length > 0) {
+    html += `<div class="fotos-section-label" style="margin-top:18px">Outras fotos<span class="fotos-count">${extras.length}</span></div><div class="posto-grid">`;
+    extras.forEach(arq => {
+      const dataStr = new Date(arq.modifiedTime).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit'});
+      html += `<div class="posto-card has-foto" onclick="openFotoExtra('${lab}','${arq.id}')">
+        <img class="posto-thumb" data-drive-id="${arq.id}" alt="${arq.name}" loading="lazy">
+        <div class="posto-dot"></div>
+        <div class="posto-label"><span class="posto-num" style="font-size:11px">${arq.name}</span><span class="posto-date">${dataStr}</span></div>
+      </div>`;
+    });
+    html += '</div>';
+  }
+
   container.innerHTML = html;
 
   // Carrega imagens via fetch autenticado após render (lazy)
@@ -1361,17 +1461,52 @@ function updateFotosBadge() {
   else badge.style.display = 'none';
 }
 
-// ── Modal de foto ──
-function openFotoModal(lab, posto) {
-  fotoModal = { lab, posto, tipo:'frente', pendingBlob:null, driveFile:null };
+// ── Modal de foto (postos reconhecidos) ──
+function openFotoModal(lab, posto, isExtra=false) {
+  fotoModal = { lab, posto, tipo:'frente', pendingBlob:null, driveFile:null, isExtra };
   document.getElementById('fotoModalTitle').textContent = `Posto ${String(posto).padStart(2,'0')}`;
   document.getElementById('fotoModalSub').textContent   = `${lab} · Selecione o tipo`;
+  document.getElementById('fotoUploadInput').disabled = false;
   switchFotoTab('frente');
   document.getElementById('fotoModalOverlay').classList.add('open');
 }
 
+// ── Modal de foto (arquivos sem posto reconhecido — visualização simples) ──
+async function openFotoExtra(lab, fileId) {
+  const extras = _driveCache[lab]?.extras || [];
+  const arq = extras.find(a => a.id === fileId);
+  if (!arq) return;
+  fotoModal = { lab, posto:null, tipo:null, pendingBlob:null, driveFile:arq, isExtra:true };
+
+  document.getElementById('fotoModalTitle').textContent = arq.name;
+  document.getElementById('fotoModalSub').textContent   = `${lab} · sem posto identificado`;
+  document.querySelector('.foto-modal-tabs').style.display = 'none';
+
+  document.getElementById('fotoLoadingOverlay').classList.add('active');
+  document.getElementById('fotoModalOverlay').classList.add('open');
+  document.getElementById('fotoUploadInput').disabled = true;
+
+  const img     = document.getElementById('fotoPreviewImg');
+  const empty   = document.getElementById('fotoEmptyArea');
+  const saveBtn = document.getElementById('fotoSaveBtn');
+  const delBtn  = document.getElementById('fotoDeleteBtn');
+  document.getElementById('fotoUploadInput').value = '';
+
+  const url = await _fetchDriveImgUrl(arq.id);
+  document.getElementById('fotoLoadingOverlay').classList.remove('active');
+  if (url) {
+    img.src = url; img.style.display = 'block'; empty.style.display = 'none';
+    saveBtn.disabled = true; delBtn.style.display = 'block';
+  } else {
+    img.style.display = 'none'; empty.style.display = 'flex';
+    saveBtn.disabled = true; delBtn.style.display = 'none';
+  }
+}
+
 function closeFotoModal() {
   document.getElementById('fotoModalOverlay').classList.remove('open');
+  document.querySelector('.foto-modal-tabs').style.display = '';
+  document.getElementById('fotoUploadInput').disabled = false;
   fotoModal.pendingBlob = null;
   if (driveAutenticado()) renderGaleriaDrive(activeFotoLab);
 }
@@ -1405,7 +1540,8 @@ async function _renderFotoPreview() {
 
   if (driveAutenticado()) {
     document.getElementById('fotoLoadingOverlay').classList.add('active');
-    const arquivo = await buscarFotoPosto(lab, posto, tipo).catch(()=>null);
+    // Usa o cache em memória já carregado pela galeria (sem nova request)
+    const arquivo = _driveCache[lab]?.postos?.[posto]?.[tipo] || null;
     fotoModal.driveFile = arquivo;
     if (arquivo?.id) {
       const url = await _fetchDriveImgUrl(arquivo.id);
@@ -1467,18 +1603,26 @@ async function salvarFoto() {
 }
 
 async function deletarFoto() {
-  const { lab, posto, tipo, driveFile } = fotoModal;
+  const { lab, posto, tipo, driveFile, isExtra } = fotoModal;
   if (!confirm('Remover esta foto?')) return;
   if (driveAutenticado() && driveFile) {
     document.getElementById('fotoLoadingOverlay').classList.add('active');
     await deletarArquivoDrive(driveFile.id).catch(()=>{});
+    if (isExtra) {
+      // Remove do cache local de extras imediatamente
+      const cache = _driveCache[lab];
+      if (cache) cache.extras = cache.extras.filter(a => a.id !== driveFile.id);
+    } else {
+      await _refreshDriveCache(lab).catch(()=>{});
+    }
     document.getElementById('fotoLoadingOverlay').classList.remove('active');
     showToast('Foto removida do Drive.', 'info', 1800);
   } else {
     _deletarFotoLocal(lab, posto, tipo);
   }
   fotoModal.driveFile = null;
-  await _renderFotoPreview();
+  if (isExtra) closeFotoModal();
+  else await _renderFotoPreview();
   updateFotosBadge();
 }
 
@@ -1579,9 +1723,8 @@ function _limparFormReporte() {
 // ══════════════════════════════════════════════
 // SERVICE WORKER
 // ══════════════════════════════════════════════
-if ('serviceWorker' in navigator && location.protocol !== 'file:') {
-  navigator.serviceWorker.register('./sw.js')
-    .catch(e => console.warn('SW:', e));
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js');
 }
 
 // Processa token legado via URL hash (fallback)
